@@ -53,7 +53,7 @@ index.html  →  main.py (FastAPI)  →  audio_optimizer.py
 | Backend | Python, FastAPI |
 | AI Agents | IBM Watsonx Foundation Models |
 | Audio Analysis | librosa, numpy, scipy |
-| Transcription | OpenAI Whisper |
+| Transcription | OpenAI Whisper (local library)|
 | Audio Optimization | librosa, scipy, soundfile |
 | Market Data | Spotify Web API |
 
