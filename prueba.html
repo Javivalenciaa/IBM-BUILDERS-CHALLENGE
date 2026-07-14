@@ -1,0 +1,1148 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <title>IBM Digital Twin Audience Analytics</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@300;400;600;700&family=Orbitron:wght@400;700;900&display=swap');
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      overflow: hidden;
+      background: #020617;
+      font-family: 'Rajdhani', sans-serif;
+      color: white;
+      user-select: none;
+    }
+
+    canvas { display: block; position: fixed; top: 0; left: 0; z-index: 0; }
+
+    /* ─── TOP NAV ─── */
+    .topbar {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      height: 48px;
+      background: rgba(4, 8, 20, 0.92);
+      border-bottom: 1px solid rgba(0,255,255,0.15);
+      display: flex;
+      align-items: center;
+      padding: 0 20px;
+      gap: 20px;
+      z-index: 100;
+      backdrop-filter: blur(20px);
+    }
+    .topbar-logo {
+      font-family: 'Orbitron', monospace;
+      font-size: 20px;
+      font-weight: 900;
+      color: #fff;
+      letter-spacing: 3px;
+      text-shadow: 0 0 20px #006eff, 0 0 40px #006eff;
+    }
+    .topbar-title {
+      font-size: 13px;
+      color: #00e5ff;
+      font-weight: 600;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      border-left: 1px solid rgba(0,229,255,0.3);
+      padding-left: 16px;
+    }
+    .topbar-tabs {
+      display: flex;
+      gap: 4px;
+      margin-left: auto;
+    }
+    .topbar-tab {
+      padding: 6px 18px;
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 1px;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: all 0.2s;
+      color: #64748b;
+      border: 1px solid transparent;
+    }
+    .topbar-tab.active {
+      color: #00e5ff;
+      border-color: rgba(0,229,255,0.4);
+      background: rgba(0,229,255,0.08);
+      text-shadow: 0 0 10px #00e5ff;
+    }
+    .topbar-icons {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      padding-left: 16px;
+      border-left: 1px solid rgba(255,255,255,0.1);
+    }
+    .icon-btn {
+      width: 32px; height: 32px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.1);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 14px; cursor: pointer; transition: all 0.2s;
+    }
+    .icon-btn:hover { background: rgba(0,229,255,0.15); border-color: #00e5ff; }
+
+    /* ─── HUD PANELS ─── */
+    .panel {
+      position: fixed;
+      background: linear-gradient(135deg, rgba(4,11,25,0.88) 0%, rgba(8,18,40,0.85) 100%);
+      border: 1px solid rgba(0,229,255,0.2);
+      border-radius: 14px;
+      padding: 18px 20px;
+      backdrop-filter: blur(24px);
+      box-shadow:
+        0 0 0 1px rgba(0,229,255,0.05) inset,
+        0 8px 40px rgba(0,0,0,0.5),
+        0 0 20px rgba(0,200,255,0.05);
+      transition: border-color 0.3s, box-shadow 0.3s;
+      z-index: 50;
+    }
+    .panel::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 20px;
+      width: 60px; height: 1px;
+      background: linear-gradient(90deg, transparent, #00e5ff, transparent);
+    }
+    .panel:hover {
+      border-color: rgba(0,229,255,0.5);
+      box-shadow: 0 0 0 1px rgba(0,229,255,0.1) inset, 0 8px 40px rgba(0,0,0,0.6), 0 0 30px rgba(0,200,255,0.15);
+    }
+
+    .panel-tl { top: 64px; left: 16px; width: 295px; }
+    .panel-tr { top: 64px; right: 16px; width: 260px; }
+    .panel-bl { bottom: 16px; left: 16px; width: 295px; }
+
+    .panel-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 14px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid rgba(255,255,255,0.07);
+    }
+    .panel-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: #00e5ff;
+      box-shadow: 0 0 8px #00e5ff;
+      animation: pulse-dot 2s infinite;
+    }
+    @keyframes pulse-dot {
+      0%,100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.5; transform: scale(0.7); }
+    }
+    .panel-title {
+      font-family: 'Orbitron', monospace;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      color: #e2e8f0;
+      text-transform: uppercase;
+    }
+    .panel-badge {
+      margin-left: auto;
+      font-size: 10px;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 20px;
+      background: rgba(0,229,255,0.12);
+      color: #00e5ff;
+      border: 1px solid rgba(0,229,255,0.3);
+      letter-spacing: 1px;
+    }
+
+    .song-label {
+      font-size: 10px;
+      color: #475569;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      margin-bottom: 4px;
+    }
+    .song-title {
+      font-family: 'Orbitron', monospace;
+      font-size: 15px;
+      font-weight: 700;
+      color: #fff;
+      letter-spacing: 1px;
+      margin-bottom: 16px;
+      text-shadow: 0 0 10px rgba(255,255,255,0.3);
+    }
+
+    /* Donut chart in CSS */
+    .donut-wrap {
+      display: flex;
+      align-items: center;
+      gap: 18px;
+      margin-bottom: 18px;
+    }
+    .donut {
+      width: 90px; height: 90px;
+      flex-shrink: 0;
+      position: relative;
+    }
+    .donut svg { width: 100%; height: 100%; }
+    .donut-legend { flex: 1; }
+
+    .stat-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 9px;
+      font-size: 13px;
+      font-weight: 600;
+    }
+    .stat-left {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .color-dot {
+      width: 10px; height: 10px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .stat-pct {
+      font-family: 'Orbitron', monospace;
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    /* Bar rows */
+    .bar-row {
+      margin-bottom: 10px;
+    }
+    .bar-header {
+      display: flex;
+      justify-content: space-between;
+      font-size: 12px;
+      font-weight: 600;
+      margin-bottom: 5px;
+    }
+    .bar-track {
+      height: 6px;
+      background: rgba(255,255,255,0.07);
+      border-radius: 3px;
+      overflow: hidden;
+    }
+    .bar-fill {
+      height: 100%;
+      border-radius: 3px;
+      transition: width 1s cubic-bezier(0.4,0,0.2,1);
+    }
+
+    /* Right panel */
+    .agents-big {
+      font-family: 'Orbitron', monospace;
+      font-size: 38px;
+      font-weight: 900;
+      color: #fff;
+      line-height: 1;
+      text-shadow: 0 0 20px rgba(255,255,255,0.3);
+    }
+    .agents-label {
+      font-size: 11px;
+      color: #475569;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      margin-bottom: 16px;
+      margin-top: 2px;
+    }
+    .mini-stat {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 10px;
+      border-radius: 8px;
+      margin-bottom: 6px;
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.05);
+      transition: background 0.2s;
+    }
+    .mini-stat:hover { background: rgba(255,255,255,0.06); }
+    .mini-stat-left { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; }
+    .mini-stat-pct { font-family: 'Orbitron', monospace; font-size: 14px; font-weight: 700; }
+    .mini-icon { font-size: 15px; }
+
+    /* Bottom legend */
+    .legend-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 10px;
+      border-radius: 8px;
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.06);
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .legend-item:hover { background: rgba(255,255,255,0.07); transform: translateY(-1px); }
+    .legend-color {
+      width: 12px; height: 12px;
+      border-radius: 3px;
+      flex-shrink: 0;
+    }
+
+    /* Center logo */
+    .center-logo {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%);
+      text-align: center;
+      z-index: 50;
+      pointer-events: none;
+    }
+    .ibm-text {
+      font-family: 'Orbitron', monospace;
+      font-size: 28px;
+      font-weight: 900;
+      letter-spacing: 6px;
+      color: #fff;
+      text-shadow: 0 0 20px #006eff, 0 0 50px #006eff, 0 0 80px rgba(0,110,255,0.4);
+    }
+    .ibm-sub {
+      font-size: 11px;
+      color: #00e5ff;
+      letter-spacing: 3px;
+      font-weight: 700;
+      text-transform: uppercase;
+      opacity: 0.85;
+    }
+
+    /* Live indicator */
+    .live-badge {
+      position: fixed;
+      top: 64px;
+      left: 50%;
+      transform: translateX(-50%);
+      margin-top: 8px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(4,11,25,0.85);
+      border: 1px solid rgba(255,50,50,0.4);
+      border-radius: 20px;
+      padding: 5px 14px;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      z-index: 50;
+    }
+    .live-dot {
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      background: #ff3333;
+      box-shadow: 0 0 8px #ff3333;
+      animation: live-pulse 1.2s infinite;
+    }
+    @keyframes live-pulse {
+      0%,100% { opacity: 1; }
+      50% { opacity: 0.3; }
+    }
+
+    /* Waveform visualizer */
+    .waveform-bar {
+      position: fixed;
+      bottom: 100px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      gap: 3px;
+      align-items: flex-end;
+      z-index: 50;
+      pointer-events: none;
+    }
+    .wave-seg {
+      width: 3px;
+      background: linear-gradient(to top, #006eff, #00e5ff);
+      border-radius: 2px;
+      opacity: 0.7;
+      animation: wave-anim var(--spd) ease-in-out infinite alternate;
+    }
+    @keyframes wave-anim {
+      from { height: 4px; }
+      to { height: var(--h); }
+    }
+
+    /* Scanline overlay */
+    .scanlines {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 200;
+      background: repeating-linear-gradient(
+        0deg,
+        rgba(0,0,0,0) 0px,
+        rgba(0,0,0,0) 2px,
+        rgba(0,0,0,0.03) 2px,
+        rgba(0,0,0,0.03) 4px
+      );
+    }
+
+    /* Corner accent */
+    .corner-tl, .corner-tr, .corner-bl, .corner-br {
+      position: fixed;
+      width: 30px; height: 30px;
+      z-index: 60;
+      pointer-events: none;
+    }
+    .corner-tl { top: 0; left: 0; border-top: 2px solid #00e5ff; border-left: 2px solid #00e5ff; }
+    .corner-tr { top: 0; right: 0; border-top: 2px solid #00e5ff; border-right: 2px solid #00e5ff; }
+    .corner-bl { bottom: 0; left: 0; border-bottom: 2px solid #00e5ff; border-left: 2px solid #00e5ff; }
+    .corner-br { bottom: 0; right: 0; border-bottom: 2px solid #00e5ff; border-right: 2px solid #00e5ff; }
+  </style>
+</head>
+<body>
+
+<!-- Scan & corner accents -->
+<div class="scanlines"></div>
+<div class="corner-tl"></div><div class="corner-tr"></div>
+<div class="corner-bl"></div><div class="corner-br"></div>
+
+<!-- Top Navigation -->
+<div class="topbar">
+  <div class="topbar-logo">IBM</div>
+  <div class="topbar-title">Music Contest — Digital Twin Analytics</div>
+  <div class="topbar-tabs">
+    <div class="topbar-tab active">Dashboard</div>
+    <div class="topbar-tab">Stactlins</div>
+    <div class="topbar-tab">Resources</div>
+    <div class="topbar-tab">Contact</div>
+  </div>
+  <div class="topbar-icons">
+    <div class="icon-btn">🔔</div>
+    <div class="icon-btn">👤</div>
+  </div>
+</div>
+
+<!-- Live badge -->
+<div class="live-badge"><div class="live-dot"></div>LIVE SIMULATION</div>
+
+<!-- Waveform -->
+<div class="waveform-bar" id="waveform"></div>
+
+<!-- Panel Top Left -->
+<div class="panel panel-tl">
+  <div class="panel-header">
+    <div class="panel-dot"></div>
+    <div class="panel-title">Digital Twin Audience</div>
+    <div class="panel-badge">ACTIVE</div>
+  </div>
+  <div class="song-label">Song Title</div>
+  <div class="song-title">ECHOES OF TOMORROW</div>
+
+  <!-- CSS Donut -->
+  <div class="donut-wrap">
+    <div class="donut">
+      <svg viewBox="0 0 100 100">
+        <circle cx="50" cy="50" r="38" fill="none" stroke="rgba(255,255,255,0.05)" stroke-width="14"/>
+        <!-- Green 34% = 238.8deg, dasharray trick -->
+        <circle cx="50" cy="50" r="38" fill="none" stroke="#00ff44" stroke-width="14"
+          stroke-dasharray="80.9 158.4" stroke-dashoffset="0"
+          stroke-linecap="round" transform="rotate(-90 50 50)"/>
+        <circle cx="50" cy="50" r="38" fill="none" stroke="#0088ff" stroke-width="14"
+          stroke-dasharray="66.6 172.7" stroke-dashoffset="-80.9"
+          stroke-linecap="round" transform="rotate(-90 50 50)"/>
+        <circle cx="50" cy="50" r="38" fill="none" stroke="#ffaa00" stroke-width="14"
+          stroke-dasharray="52.3 187" stroke-dashoffset="-147.5"
+          stroke-linecap="round" transform="rotate(-90 50 50)"/>
+        <circle cx="50" cy="50" r="38" fill="none" stroke="#ff2222" stroke-width="14"
+          stroke-dasharray="38.1 201.2" stroke-dashoffset="-199.8"
+          stroke-linecap="round" transform="rotate(-90 50 50)"/>
+        <text x="50" y="46" text-anchor="middle" fill="white" font-size="10" font-family="Orbitron,monospace" font-weight="700">150</text>
+        <text x="50" y="58" text-anchor="middle" fill="#475569" font-size="6.5" font-family="Rajdhani,sans-serif" letter-spacing="1">AGENTS</text>
+      </svg>
+    </div>
+    <div class="donut-legend">
+      <div class="stat-row">
+        <div class="stat-left"><div class="color-dot" style="background:#00ff44;box-shadow:0 0 6px #00ff44"></div><span style="color:#cbd5e1">Playlist Add</span></div>
+        <span class="stat-pct" style="color:#00ff44">34%</span>
+      </div>
+      <div class="stat-row">
+        <div class="stat-left"><div class="color-dot" style="background:#0088ff;box-shadow:0 0 6px #0088ff"></div><span style="color:#cbd5e1">Share</span></div>
+        <span class="stat-pct" style="color:#0088ff">28%</span>
+      </div>
+      <div class="stat-row">
+        <div class="stat-left"><div class="color-dot" style="background:#ffaa00;box-shadow:0 0 6px #ffaa00"></div><span style="color:#cbd5e1">Listen Once</span></div>
+        <span class="stat-pct" style="color:#ffaa00">22%</span>
+      </div>
+      <div class="stat-row">
+        <div class="stat-left"><div class="color-dot" style="background:#ff2222;box-shadow:0 0 6px #ff2222"></div><span style="color:#cbd5e1">Dislike</span></div>
+        <span class="stat-pct" style="color:#ff2222">16%</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bars -->
+  <div class="bar-row">
+    <div class="bar-header"><span style="color:#94a3b8;font-size:11px">ENGAGEMENT SCORE</span><span style="color:#00e5ff;font-family:Orbitron,monospace;font-size:11px">84/100</span></div>
+    <div class="bar-track"><div class="bar-fill" style="width:84%;background:linear-gradient(90deg,#006eff,#00e5ff);box-shadow:0 0 8px #00e5ff"></div></div>
+  </div>
+  <div class="bar-row">
+    <div class="bar-header"><span style="color:#94a3b8;font-size:11px">VIRAL POTENTIAL</span><span style="color:#00ff44;font-family:Orbitron,monospace;font-size:11px">62%</span></div>
+    <div class="bar-track"><div class="bar-fill" style="width:62%;background:linear-gradient(90deg,#00aa33,#00ff44);box-shadow:0 0 8px #00ff44"></div></div>
+  </div>
+</div>
+
+<!-- Panel Top Right -->
+<div class="panel panel-tr">
+  <div class="panel-header">
+    <div class="panel-dot" style="background:#ffaa00;box-shadow:0 0 8px #ffaa00;animation:none"></div>
+    <div class="panel-title">Agent Summary</div>
+  </div>
+  <div class="agents-big">150</div>
+  <div class="agents-label">Active Agents</div>
+
+  <div class="mini-stat">
+    <div class="mini-stat-left"><span class="mini-icon">🎵</span><span style="color:#00ff44">Add to Playlist</span></div>
+    <span class="mini-stat-pct" style="color:#00ff44">~34%</span>
+  </div>
+  <div class="mini-stat">
+    <div class="mini-stat-left"><span class="mini-icon">📤</span><span style="color:#0088ff">Share Song</span></div>
+    <span class="mini-stat-pct" style="color:#0088ff">~28%</span>
+  </div>
+  <div class="mini-stat">
+    <div class="mini-stat-left"><span class="mini-icon">🎧</span><span style="color:#ffaa00">Listen Once & Done</span></div>
+    <span class="mini-stat-pct" style="color:#ffaa00">~22%</span>
+  </div>
+  <div class="mini-stat">
+    <div class="mini-stat-left"><span class="mini-icon">🚫</span><span style="color:#ff2222">Dislike</span></div>
+    <span class="mini-stat-pct" style="color:#ff2222">~16%</span>
+  </div>
+</div>
+
+<!-- Panel Bottom Left -->
+<div class="panel panel-bl">
+  <div class="panel-header">
+    <div class="panel-dot" style="background:#a855f7;box-shadow:0 0 8px #a855f7"></div>
+    <div class="panel-title">Section Legend</div>
+    <div class="panel-badge">150 TOTAL</div>
+  </div>
+  <div class="legend-grid">
+    <div class="legend-item"><div class="legend-color" style="background:#00ff44;box-shadow:0 0 6px #00ff44"></div>Playlist Add</div>
+    <div class="legend-item"><div class="legend-color" style="background:#0088ff;box-shadow:0 0 6px #0088ff"></div>Share</div>
+    <div class="legend-item"><div class="legend-color" style="background:#ffaa00;box-shadow:0 0 6px #ffaa00"></div>Listen Once</div>
+    <div class="legend-item"><div class="legend-color" style="background:#ff2222;box-shadow:0 0 6px #ff2222"></div>Dislike</div>
+  </div>
+</div>
+
+<!-- IBM Center Logo -->
+<div class="center-logo">
+  <div class="ibm-text">IBM</div>
+  <div class="ibm-sub">Digital Twin Audiciones</div>
+</div>
+
+<!-- ──────────── THREE.JS ──────────── -->
+<script type="module">
+import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.160/build/three.module.js";
+
+// ─── WAVEFORM ───
+const wf = document.getElementById('waveform');
+for(let i=0;i<40;i++){
+  const d = document.createElement('div');
+  d.className='wave-seg';
+  const h = 6 + Math.random()*22;
+  d.style.setProperty('--h', h+'px');
+  d.style.setProperty('--spd', (0.3+Math.random()*0.6)+'s');
+  d.style.height = h+'px';
+  wf.appendChild(d);
+}
+
+// ─── SCENE ───
+const scene = new THREE.Scene();
+scene.fog = new THREE.FogExp2(0x020617, 0.009);
+
+const camera = new THREE.PerspectiveCamera(50, window.innerWidth/window.innerHeight, 0.1, 500);
+camera.position.set(0, 18, 32);
+camera.lookAt(0, 5, 0);
+
+const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false, powerPreference:'high-performance' });
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.setClearColor(0x020617);
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.2;
+document.body.insertBefore(renderer.domElement, document.body.firstChild);
+
+// ─── LIGHTING (CINEMATIC) ───
+// Ambient subtle
+const ambient = new THREE.AmbientLight(0x0d1933, 0.8);
+scene.add(ambient);
+
+// Key spot — overhead stage
+const keySpot = new THREE.SpotLight(0xffffff, 400);
+keySpot.position.set(0, 55, 10);
+keySpot.angle = Math.PI/4;
+keySpot.penumbra = 0.6;
+keySpot.castShadow = true;
+keySpot.shadow.mapSize.width = 4096;
+keySpot.shadow.mapSize.height = 4096;
+keySpot.shadow.bias = -0.0005;
+keySpot.shadow.camera.near = 10;
+keySpot.shadow.camera.far = 120;
+scene.add(keySpot);
+
+// Hemisphere sky/ground
+const hemi = new THREE.HemisphereLight(0x1a3066, 0x050a10, 0.5);
+scene.add(hemi);
+
+// Section colored fills — strong and volumetric
+const sectionLights = [
+  { color: 0x00ff44, pos: [-22, 6, -8] },  // green
+  { color: 0x0066ff, pos: [-10, 6, -14] }, // blue
+  { color: 0xff8800, pos: [10,  6, -14] }, // orange
+  { color: 0xff1111, pos: [22,  6, -8] },  // red
+];
+sectionLights.forEach(sl => {
+  const pt = new THREE.PointLight(sl.color, 60, 35, 1.5);
+  pt.position.set(...sl.pos);
+  scene.add(pt);
+});
+
+// Stage center glow
+const stageCyan = new THREE.PointLight(0x00e5ff, 180, 18, 1.8);
+stageCyan.position.set(0, 3, 0);
+scene.add(stageCyan);
+
+// Rim back fill
+const rimBack = new THREE.DirectionalLight(0x0033aa, 0.5);
+rimBack.position.set(0, 10, -30);
+scene.add(rimBack);
+
+// ─── FACE TEXTURES (HYPER-DETAILED) ───
+function createFaceTexture(mood, skinTone) {
+  const c = document.createElement('canvas');
+  c.width = 512; c.height = 512;
+  const ctx = c.getContext('2d');
+
+  // Skin gradient
+  const sk = ctx.createRadialGradient(256,200,20,256,220,240);
+  sk.addColorStop(0, skinTone[0]);
+  sk.addColorStop(1, skinTone[1]);
+  ctx.fillStyle = sk;
+  ctx.fillRect(0,0,512,512);
+
+  // Cheek blush
+  ctx.fillStyle = 'rgba(255,100,80,0.12)';
+  ctx.beginPath(); ctx.ellipse(130,230,60,45,0,0,Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(382,230,60,45,0,0,Math.PI*2); ctx.fill();
+
+  ctx.strokeStyle = '#1a0800';
+  ctx.lineWidth = 18;
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+
+  // HAIR
+  ctx.fillStyle = ['#1a0800','#3d2200','#000000','#5c3a00','#8b4513'][Math.floor(Math.random()*5)];
+  if (Math.random() > 0.5) {
+    // Short hair top
+    ctx.beginPath();
+    ctx.ellipse(256,80,170,110,0,Math.PI,0);
+    ctx.fill();
+  } else {
+    // Side hair
+    ctx.beginPath();
+    ctx.moveTo(86,80); ctx.lineTo(60,300); ctx.lineTo(86,300);
+    ctx.lineTo(86,80); ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(426,80); ctx.lineTo(452,300); ctx.lineTo(426,300);
+    ctx.lineTo(426,80); ctx.fill();
+    ctx.beginPath();
+    ctx.ellipse(256,80,170,110,0,Math.PI,0);
+    ctx.fill();
+  }
+
+  const eyeColors = ['#1a0a00','#00264d','#2d4d00','#4d1a00'];
+  const eyeColor = eyeColors[Math.floor(Math.random()*eyeColors.length)];
+
+  if (mood === 'happy') {
+    // Brows slight raise
+    ctx.strokeStyle = '#2a1000'; ctx.lineWidth = 14;
+    ctx.beginPath(); ctx.moveTo(110,160); ctx.quadraticCurveTo(160,140,210,160); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(300,160); ctx.quadraticCurveTo(350,140,400,160); ctx.stroke();
+    // Eyes - closed happy arc
+    ctx.strokeStyle = '#1a0800'; ctx.lineWidth = 18;
+    ctx.beginPath(); ctx.arc(160,200,35,Math.PI+0.3,0-0.3); ctx.stroke();
+    ctx.beginPath(); ctx.arc(352,200,35,Math.PI+0.3,0-0.3); ctx.stroke();
+    // White teeth smile
+    ctx.fillStyle='#fff';
+    ctx.beginPath(); ctx.arc(256,320,60,0,Math.PI); ctx.fill();
+    ctx.strokeStyle='#1a0800'; ctx.lineWidth=16;
+    ctx.beginPath(); ctx.arc(256,310,60,0,Math.PI); ctx.stroke();
+    // teeth line
+    ctx.strokeStyle='rgba(0,0,0,0.2)'; ctx.lineWidth=4;
+    ctx.beginPath(); ctx.moveTo(198,310); ctx.lineTo(314,310); ctx.stroke();
+
+  } else if (mood === 'neutral') {
+    // Brows flat
+    ctx.strokeStyle='#2a1000'; ctx.lineWidth=12;
+    ctx.beginPath(); ctx.moveTo(110,170); ctx.lineTo(210,165); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(300,165); ctx.lineTo(400,170); ctx.stroke();
+    // Pupils with iris
+    ctx.fillStyle='#fff'; ctx.beginPath(); ctx.ellipse(160,205,28,30,0,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle='#fff'; ctx.beginPath(); ctx.ellipse(352,205,28,30,0,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle=eyeColor; ctx.beginPath(); ctx.ellipse(160,205,16,18,0,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle=eyeColor; ctx.beginPath(); ctx.ellipse(352,205,16,18,0,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle='#000'; ctx.beginPath(); ctx.ellipse(163,207,8,9,0,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle='#000'; ctx.beginPath(); ctx.ellipse(355,207,8,9,0,0,Math.PI*2); ctx.fill();
+    // Eye outline
+    ctx.strokeStyle='#1a0800'; ctx.lineWidth=14;
+    ctx.beginPath(); ctx.ellipse(160,205,28,30,0,0,Math.PI*2); ctx.stroke();
+    ctx.beginPath(); ctx.ellipse(352,205,28,30,0,0,Math.PI*2); ctx.stroke();
+    // Neutral mouth
+    ctx.strokeStyle='#1a0800'; ctx.lineWidth=16;
+    ctx.beginPath(); ctx.moveTo(190,325); ctx.quadraticCurveTo(256,335,322,325); ctx.stroke();
+
+  } else { // angry
+    // Angry brows
+    ctx.strokeStyle='#2a1000'; ctx.lineWidth=16;
+    ctx.beginPath(); ctx.moveTo(100,155); ctx.lineTo(215,185); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(412,155); ctx.lineTo(297,185); ctx.stroke();
+    // Pupils - small and sharp
+    ctx.fillStyle='#fff'; ctx.beginPath(); ctx.ellipse(160,210,25,27,0,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle='#fff'; ctx.beginPath(); ctx.ellipse(352,210,25,27,0,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle='#500'; ctx.beginPath(); ctx.ellipse(160,212,13,15,0,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle='#500'; ctx.beginPath(); ctx.ellipse(352,212,13,15,0,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle='#000'; ctx.beginPath(); ctx.ellipse(162,213,7,8,0,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle='#000'; ctx.beginPath(); ctx.ellipse(354,213,7,8,0,0,Math.PI*2); ctx.fill();
+    ctx.strokeStyle='#1a0800'; ctx.lineWidth=14;
+    ctx.beginPath(); ctx.ellipse(160,210,25,27,0,0,Math.PI*2); ctx.stroke();
+    ctx.beginPath(); ctx.ellipse(352,210,25,27,0,0,Math.PI*2); ctx.stroke();
+    // Angry mouth
+    ctx.strokeStyle='#1a0800'; ctx.lineWidth=16;
+    ctx.beginPath(); ctx.moveTo(190,340); ctx.quadraticCurveTo(256,310,322,340); ctx.stroke();
+  }
+
+  // Nose
+  ctx.strokeStyle='rgba(80,30,0,0.5)'; ctx.lineWidth=10;
+  ctx.beginPath(); ctx.moveTo(248,240); ctx.lineTo(226,290); ctx.quadraticCurveTo(256,305,286,290); ctx.lineTo(264,240); ctx.stroke();
+
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace;
+  return t;
+}
+
+// Skin tones variety
+const skinTones = [
+  ['#ffe0c0','#d4956a'],
+  ['#f0c090','#c07840'],
+  ['#d4956a','#a05030'],
+  ['#8b5a2b','#5c3010'],
+  ['#ffe0d0','#e8a080'],
+];
+
+// Pre-cache face material pools
+const faceMaterialPool = { happy:[], neutral:[], angry:[] };
+const POOL_SIZE = 24;
+['happy','neutral','angry'].forEach(mood => {
+  for(let i=0;i<POOL_SIZE;i++){
+    const skin = skinTones[Math.floor(Math.random()*skinTones.length)];
+    const mat = new THREE.MeshStandardMaterial({
+      map: createFaceTexture(mood, skin),
+      roughness: 0.35,
+      metalness: 0.05,
+    });
+    faceMaterialPool[mood].push(mat);
+  }
+});
+
+function getRandomFaceMat(mood) {
+  const pool = faceMaterialPool[mood];
+  return pool[Math.floor(Math.random()*pool.length)];
+}
+
+// Shared geometries
+const headGeo = new THREE.BoxGeometry(0.44,0.44,0.44,2,2,2);
+const torsoGeo = new THREE.CapsuleGeometry(0.22,0.38,4,12);
+const legGeo   = new THREE.CapsuleGeometry(0.1,0.38,4,8);
+const armGeo   = new THREE.CapsuleGeometry(0.07,0.32,4,8);
+const shoeGeo  = new THREE.BoxGeometry(0.14,0.08,0.18);
+const hairGeo  = new THREE.SphereGeometry(0.24,12,8,0,Math.PI*2,0,Math.PI*0.6);
+
+// Shirt colors with glow emissive
+const shirtColors = [
+  { c:0x00cc33, e:0x00ff44, sec:0 },
+  { c:0x0066ee, e:0x0088ff, sec:1 },
+  { c:0xdd8800, e:0xffaa00, sec:2 },
+  { c:0xcc1111, e:0xff2222, sec:3 },
+];
+const pantsMat = new THREE.MeshStandardMaterial({ color:0x1a202c, roughness:0.9, metalness:0.05 });
+const shoeMat  = new THREE.MeshStandardMaterial({ color:0x111111, roughness:0.5, metalness:0.3 });
+
+// ─── AVATAR FACTORY ───
+const agentsArray = [];
+
+function createAgent(sectionIdx) {
+  const agent = new THREE.Group();
+  const sc = shirtColors[sectionIdx];
+  const mood = sectionIdx<=1 ? 'happy' : sectionIdx===2 ? 'neutral' : 'angry';
+
+  const shirtMat = new THREE.MeshStandardMaterial({
+    color: sc.c, roughness:0.25, metalness:0.3,
+    emissive: sc.e, emissiveIntensity: 0.08
+  });
+  const skinMatBody = new THREE.MeshStandardMaterial({
+    color: 0xffccaa, roughness:0.4, metalness:0.03
+  });
+
+  const faceMat = getRandomFaceMat(mood);
+  const headMats = [skinMatBody,skinMatBody,skinMatBody,skinMatBody,faceMat,skinMatBody];
+
+  // HEAD
+  const neckPivot = new THREE.Group();
+  neckPivot.position.y = 1.15;
+  const head = new THREE.Mesh(headGeo, headMats);
+  head.position.y = 0.22;
+  head.castShadow = true;
+  neckPivot.add(head);
+
+  // Ears
+  const earGeo = new THREE.SphereGeometry(0.07,8,8);
+  const earL = new THREE.Mesh(earGeo, skinMatBody);
+  earL.position.set(-0.24,0.22,0); earL.scale.set(0.7,1,0.5);
+  neckPivot.add(earL);
+  const earR = new THREE.Mesh(earGeo, skinMatBody);
+  earR.position.set(0.24,0.22,0); earR.scale.set(0.7,1,0.5);
+  neckPivot.add(earR);
+
+  agent.add(neckPivot);
+
+  // TORSO
+  const torso = new THREE.Mesh(torsoGeo, shirtMat);
+  torso.position.y = 0.68;
+  torso.castShadow = true;
+  agent.add(torso);
+
+  // NECK
+  const neckMesh = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.09,0.10,0.2,8), skinMatBody
+  );
+  neckMesh.position.y = 1.05;
+  agent.add(neckMesh);
+
+  // LEGS (sitting)
+  const thighL = new THREE.Group();
+  thighL.position.set(-0.14,0.38,0);
+  const tL = new THREE.Mesh(legGeo, pantsMat);
+  tL.rotation.x = Math.PI/2.2; tL.position.z=0.2; tL.castShadow=true;
+  thighL.add(tL); agent.add(thighL);
+
+  const thighR = new THREE.Group();
+  thighR.position.set(0.14,0.38,0);
+  const tR = new THREE.Mesh(legGeo, pantsMat);
+  tR.rotation.x = Math.PI/2.2; tR.position.z=0.2; tR.castShadow=true;
+  thighR.add(tR); agent.add(thighR);
+
+  // Calves
+  const calfL = new THREE.Mesh(legGeo, pantsMat);
+  calfL.position.set(-0.14,0.12,0.5); calfL.rotation.x=-0.4; calfL.castShadow=true;
+  agent.add(calfL);
+  const calfR = new THREE.Mesh(legGeo, pantsMat);
+  calfR.position.set(0.14,0.12,0.5); calfR.rotation.x=-0.4; calfR.castShadow=true;
+  agent.add(calfR);
+
+  // Shoes
+  const shoeL = new THREE.Mesh(shoeGeo, shoeMat);
+  shoeL.position.set(-0.14,0.04,0.7); agent.add(shoeL);
+  const shoeR = new THREE.Mesh(shoeGeo, shoeMat);
+  shoeR.position.set(0.14,0.04,0.7); agent.add(shoeR);
+
+  // ARMS
+  const shoulderL = new THREE.Group();
+  shoulderL.position.set(-0.32,0.88,0);
+  const aL = new THREE.Mesh(armGeo, shirtMat);
+  aL.position.y=-0.2; aL.castShadow=true; shoulderL.add(aL);
+  // Forearm
+  const forearmL = new THREE.Group();
+  forearmL.position.y=-0.42;
+  const faL = new THREE.Mesh(armGeo, skinMatBody);
+  faL.position.y=-0.18; faL.castShadow=true; forearmL.add(faL);
+  shoulderL.add(forearmL);
+  agent.add(shoulderL);
+
+  const shoulderR = new THREE.Group();
+  shoulderR.position.set(0.32,0.88,0);
+  const aR = new THREE.Mesh(armGeo, shirtMat);
+  aR.position.y=-0.2; aR.castShadow=true; shoulderR.add(aR);
+  const forearmR = new THREE.Group();
+  forearmR.position.y=-0.42;
+  const faR = new THREE.Mesh(armGeo, skinMatBody);
+  faR.position.y=-0.18; faR.castShadow=true; forearmR.add(faR);
+  shoulderR.add(forearmR);
+  agent.add(shoulderR);
+
+  agent.userData = {
+    mood, baseY:0,
+    t: Math.random()*100,
+    speed: 0.8 + Math.random()*0.8,
+    neck: neckPivot,
+    shoulderL, shoulderR,
+    forearmL, forearmR,
+    sectionIdx,
+  };
+
+  return agent;
+}
+
+// ─── STAGE ───
+const stageGroup = new THREE.Group();
+
+// Base platform
+const platform = new THREE.Mesh(
+  new THREE.CylinderGeometry(5.5,6,0.9,80),
+  new THREE.MeshStandardMaterial({ color:0x050d1a, roughness:0.05, metalness:0.95, envMapIntensity:1 })
+);
+platform.receiveShadow = true;
+stageGroup.add(platform);
+
+// Inner glow disc
+const glowDisc = new THREE.Mesh(
+  new THREE.CylinderGeometry(4.5,4.5,0.05,60),
+  new THREE.MeshStandardMaterial({ color:0x00e5ff, emissive:0x00e5ff, emissiveIntensity:1.5, transparent:true, opacity:0.6 })
+);
+glowDisc.position.y = 0.48;
+stageGroup.add(glowDisc);
+
+// Concentric rings 3D
+for(let i=0;i<4;i++){
+  const ring = new THREE.Mesh(
+    new THREE.TorusGeometry(2.5+i*0.9, 0.04, 16, 120),
+    new THREE.MeshStandardMaterial({ color:0x00e5ff, emissive:0x00e5ff, emissiveIntensity:3, transparent:true, opacity:0.8-i*0.15 })
+  );
+  ring.rotation.x = Math.PI/2;
+  ring.position.y = 0.45;
+  stageGroup.add(ring);
+}
+
+// Vertical light pillars at stage edge
+for(let i=0;i<8;i++){
+  const angle = (i/8)*Math.PI;
+  const px = Math.cos(angle)*5.2;
+  const pz = -Math.sin(angle)*5.2;
+  const pillar = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.04,0.04,0.6,8),
+    new THREE.MeshStandardMaterial({ color:0xffffff, emissive:0xffffff, emissiveIntensity:3 })
+  );
+  pillar.position.set(px,0.75,pz);
+  stageGroup.add(pillar);
+}
+
+scene.add(stageGroup);
+
+// ─── FLOOR ───
+const floorMesh = new THREE.Mesh(
+  new THREE.CircleGeometry(80,128),
+  new THREE.MeshStandardMaterial({ color:0x020a1a, roughness:0.95, metalness:0.05 })
+);
+floorMesh.rotation.x = -Math.PI/2;
+floorMesh.position.y = -0.5;
+floorMesh.receiveShadow = true;
+scene.add(floorMesh);
+
+// ─── SEMICIRCULAR STANDS ───
+const TIERS     = 8;
+const R_START   = 8;
+const ROW_DEPTH = 2.0;
+const ROW_H     = 1.35;
+const SPAN      = Math.PI;
+
+const bodyColors4 = [0x00cc33, 0x0066ee, 0xdd8800, 0xcc1111];
+const ledColors   = [0x00ff44, 0x0088ff, 0xffaa00, 0xff2222];
+
+for(let row=0; row<TIERS; row++){
+  const rIn  = R_START + row*ROW_DEPTH;
+  const rOut = rIn + ROW_DEPTH;
+  const y    = row * ROW_H;
+
+  // Tier floor
+  const floorGeo = new THREE.RingGeometry(rIn, rOut, 80, 1, 0, SPAN);
+  const tierMat = new THREE.MeshStandardMaterial({
+    color: row%2===0 ? 0x0d1525 : 0x0a1020,
+    roughness: 0.8, metalness: 0.1
+  });
+  const tierFloor = new THREE.Mesh(floorGeo, tierMat);
+  tierFloor.rotation.x = -Math.PI/2;
+  tierFloor.position.y = y;
+  tierFloor.receiveShadow = true;
+  scene.add(tierFloor);
+
+  // Riser wall
+  if(row>0){
+    const wallGeo = new THREE.CylinderGeometry(rIn,rIn,ROW_H,80,1,true,0,SPAN);
+    const wallMat = new THREE.MeshStandardMaterial({ color:0x06101e, roughness:0.9 });
+    const wall = new THREE.Mesh(wallGeo, wallMat);
+    wall.position.y = y - ROW_H/2;
+    wall.receiveShadow = true;
+    scene.add(wall);
+  }
+
+  // LED strip per section color
+  const segSpan = SPAN/4;
+  for(let sec=0;sec<4;sec++){
+    const ledMesh = new THREE.Mesh(
+      new THREE.TorusGeometry(rIn+0.05, 0.035, 8, 80, segSpan*0.92),
+      new THREE.MeshStandardMaterial({
+        color: ledColors[sec], emissive: ledColors[sec], emissiveIntensity: 2.5
+      })
+    );
+    ledMesh.rotation.x = Math.PI/2;
+    ledMesh.rotation.y = sec*segSpan + segSpan*0.04;
+    ledMesh.position.y = y + 0.04;
+    scene.add(ledMesh);
+  }
+
+  // ─── POPULATE SEATS ───
+  const seatsInRow = 16 + row*5;
+  const secSpanRad = SPAN/4;
+
+  for(let i=0;i<seatsInRow;i++){
+    const angle = (i/(seatsInRow-1)) * SPAN;
+    const secIdx = Math.min(3, Math.floor(angle/secSpanRad));
+    const angleInSec = angle % secSpanRad;
+    if(angleInSec < 0.06 || angleInSec > secSpanRad-0.06) continue;
+
+    const r = rIn + ROW_DEPTH*0.55;
+    const x = Math.cos(angle)*r;
+    const z = -Math.sin(angle)*r;
+
+    const ag = createAgent(secIdx);
+    ag.position.set(x, y, z);
+    ag.rotation.y = -angle + Math.PI/2;
+    ag.userData.baseY = y;
+    scene.add(ag);
+    agentsArray.push(ag);
+  }
+}
+// ─── PARTICLES ───
+// Type A: cyan ambient
+const pGeo = new THREE.BufferGeometry();
+const pN = 2000;
+const pPos = new Float32Array(pN*3);
+for(let i=0;i<pN*3;i++) pPos[i]=(Math.random()-0.5)*100;
+pGeo.setAttribute('position',new THREE.BufferAttribute(pPos,3));
+const pMat = new THREE.PointsMaterial({ color:0x00e5ff, size:0.12, transparent:true, opacity:0.5, blending:THREE.AdditiveBlending, depthWrite:false });
+const particles = new THREE.Points(pGeo, pMat);
+particles.position.y = 20;
+scene.add(particles);
+
+// Type B: rising data sparks
+const sparkGeo = new THREE.BufferGeometry();
+const sN = 300;
+const sPos = new Float32Array(sN*3);
+for(let i=0;i<sN;i++){
+  const a = Math.random()*Math.PI;
+  const r = 5 + Math.random()*20;
+  sPos[i*3]   = Math.cos(a)*r;
+  sPos[i*3+1] = Math.random()*20;
+  sPos[i*3+2] = -Math.sin(a)*r;
+}
+sparkGeo.setAttribute('position',new THREE.BufferAttribute(sPos,3));
+const sMat = new THREE.PointsMaterial({ color:0xffffff, size:0.2, transparent:true, opacity:0.7, blending:THREE.AdditiveBlending, depthWrite:false });
+const sparks = new THREE.Points(sparkGeo, sMat);
+scene.add(sparks);
+
+// ─── ANIMATION LOOP ───
+const clock = new THREE.Clock();
+let frame = 0;
+
+function animate(){
+  requestAnimationFrame(animate);
+  const time = clock.getElapsedTime();
+  frame++;
+
+  // Stage rings spin + pulse
+  // ✅ Solo pulse de escala, sin rotación que los saque del plano
+  stageGroup.children.forEach((child,idx)=>{
+    if(child.geometry?.type==='TorusGeometry'){
+      const s = 1 + Math.sin(time*2.5+idx)*0.015;
+      child.scale.set(s,s,s);
+    }
+});
+  glowDisc.material.emissiveIntensity = 1.2 + Math.sin(time*3)*0.6;
+  stageCyan.intensity = 160 + Math.sin(time*2.5)*40;
+
+  // Particles
+  particles.rotation.y = time*0.025;
+  particles.position.y = 18 + Math.sin(time*0.4)*3;
+
+  // Sparks drift up
+  const sArr = sparkGeo.attributes.position.array;
+  for(let i=0;i<sN;i++){
+    sArr[i*3+1] += 0.03;
+    if(sArr[i*3+1]>25) sArr[i*3+1]=0;
+  }
+  sparkGeo.attributes.position.needsUpdate = true;
+
+  // Agent animations
+  agentsArray.forEach(ag=>{
+    const d = ag.userData;
+    const t = time*d.speed + d.t;
+    const neck = d.neck;
+    const sL = d.shoulderL, sR = d.shoulderR;
+    const fL = d.forearmL, fR = d.forearmR;
+
+    if(d.mood==='happy'){
+      ag.position.y = d.baseY + Math.abs(Math.sin(t*1.8))*0.28;
+      sL.rotation.z =  Math.sin(t)*0.7 - 2.2;
+      sL.rotation.x =  Math.cos(t*0.8)*0.3;
+      sR.rotation.z = -Math.sin(t)*0.7 + 2.2;
+      sR.rotation.x =  Math.cos(t*0.8)*0.3;
+      fL.rotation.x =  Math.sin(t*1.2)*0.4;
+      fR.rotation.x = -Math.sin(t*1.2)*0.4;
+      neck.rotation.y = Math.sin(t*0.6)*0.25;
+      neck.rotation.x = Math.sin(t*1.4)*0.1 - 0.05;
+
+    } else if(d.mood==='neutral'){
+      ag.position.y = d.baseY;
+      sL.rotation.z =  0.25; sL.rotation.x = 0.7;
+      sR.rotation.z = -0.25; sR.rotation.x = 0.7;
+      fL.rotation.x = 0.3;   fR.rotation.x = 0.3;
+      neck.rotation.y = Math.sin(t*0.25)*0.5;
+      neck.rotation.x = 0.05;
+
+    } else {
+      ag.position.y = d.baseY;
+      sL.rotation.z = -1.0; sL.rotation.x = 0.8;
+      sR.rotation.z =  1.0; sR.rotation.x = 0.8;
+      fL.rotation.x = 0.6;  fR.rotation.x = 0.6;
+      neck.rotation.y = Math.sin(t*2.2)*0.28;
+      neck.rotation.x = 0.18;
+    }
+  });
+
+  // Cinematic slow camera orbit
+  const camT = time*0.07;
+  camera.position.x = Math.sin(camT)*4;
+  camera.position.y = 16 + Math.sin(time*0.05)*2;
+  camera.position.z = 30 + Math.cos(camT*0.7)*2;
+  camera.lookAt(0, 5, 0);
+
+  renderer.render(scene, camera);
+}
+animate();
+
+window.addEventListener('resize',()=>{
+  camera.aspect = window.innerWidth/window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth,window.innerHeight);
+});
+</script>
+</body>
+</html>

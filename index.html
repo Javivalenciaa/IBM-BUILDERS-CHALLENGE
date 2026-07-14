@@ -1,0 +1,1241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AUDIENCE LAB - Your Digital Audience</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Orbitron:wght@400;700;900&family=Rajdhani:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        /* ═══════════════════════ GLOBAL RESET ═══════════════════════ */
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Inter', sans-serif; background: #0a0a0f; color: #ffffff; overflow-x: hidden; }
+
+        /* ═══════════════════════ SCREENS ═══════════════════════ */
+        .screen { display: none; opacity: 0; transform: translateY(20px); transition: opacity 0.4s ease, transform 0.4s ease; min-height: 100vh; padding: 2rem; }
+        .screen.active { display: block; opacity: 1; transform: translateY(0); }
+        
+        /* Audience screen - scrollable page with contained stadium */
+        #screen-audience {
+            padding: 0 2rem 2rem 2rem !important; /* No top padding */
+            background: #0a0a0f;
+            font-family: 'Rajdhani', sans-serif;
+            overflow-y: auto !important;
+            overflow-x: hidden;
+            min-height: 100vh;
+        }
+        #screen-audience.active { transform: none !important; display: block !important; }
+        
+        /* Stadium container - contained box with border */
+        .stadium-viewport {
+            position: relative;
+            width: 100%;
+            max-width: 1400px;
+            height: 80vh;
+            min-height: 600px;
+            margin: 0 auto 3rem; /* No top margin */
+            overflow: hidden;
+            border: 2px solid rgba(124,58,237,0.3);
+            border-radius: 20px;
+            background: #020617;
+            box-shadow: 0 0 40px rgba(124,58,237,0.2), 0 10px 60px rgba(0,0,0,0.5);
+        }
+        
+        /* Stadium canvas should fit container */
+        .stadium-viewport canvas {
+            width: 100% !important;
+            height: 100% !important;
+        }
+
+        /* ═══════════════════════ UPLOAD SCREEN ═══════════════════════ */
+        .glow-text { text-shadow: 0 0 20px rgba(124,58,237,0.8), 0 0 40px rgba(124,58,237,0.6); }
+        #screen-upload { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; }
+        .hero-title { font-size: 5rem; font-weight: 900; letter-spacing: 0.1em; margin-bottom: 1rem; background: linear-gradient(135deg,#7c3aed 0%,#06b6d4 100%); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+        .tagline { font-size: 1.5rem; color: #a0a0b0; margin-bottom: 3rem; font-weight: 300; }
+        .upload-zone { width: 100%; max-width: 600px; height: 200px; border: 3px dashed #7c3aed; border-radius: 20px; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; transition: all 0.3s ease; margin-bottom: 2rem; animation: pulse-border 2s infinite; }
+        @keyframes pulse-border { 0%,100%{border-color:#7c3aed;box-shadow:0 0 20px rgba(124,58,237,0.3)} 50%{border-color:#06b6d4;box-shadow:0 0 30px rgba(6,182,212,0.5)} }
+        .upload-zone:hover { background: rgba(124,58,237,0.1); transform: scale(1.02); }
+        .upload-icon { font-size: 3rem; margin-bottom: 1rem; }
+        .upload-text { font-size: 1.2rem; color: #a0a0b0; }
+        .file-name { margin-top: 0.5rem; color: #7c3aed; font-weight: 600; }
+        input[type="file"] { display: none; }
+        .form-group { width: 100%; max-width: 600px; margin-bottom: 2rem; }
+        .form-label { display: block; margin-bottom: 0.5rem; color: #a0a0b0; font-weight: 500; }
+        .form-input { width: 100%; padding: 1rem; background: rgba(255,255,255,0.05); border: 2px solid rgba(124,58,237,0.3); border-radius: 10px; color: #ffffff; font-size: 1rem; font-family: 'Inter', sans-serif; transition: all 0.3s ease; }
+        .form-input:focus { outline: none; border-color: #7c3aed; box-shadow: 0 0 20px rgba(124,58,237,0.3); }
+        .slider { width: 100%; height: 8px; background: rgba(255,255,255,0.1); border-radius: 10px; outline: none; appearance: none; -webkit-appearance: none; }
+        .slider::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 24px; height: 24px; background: #7c3aed; border-radius: 50%; cursor: pointer; box-shadow: 0 0 20px rgba(124,58,237,0.8); }
+        .slider-value { text-align: center; margin-top: 0.5rem; font-size: 1.5rem; color: #7c3aed; font-weight: 700; }
+        .genre-pills { display: flex; flex-wrap: wrap; gap: 1rem; margin-top: 1rem; }
+        .genre-pill { padding: 0.75rem 1.5rem; background: rgba(255,255,255,0.05); border: 2px solid rgba(124,58,237,0.3); border-radius: 50px; cursor: pointer; transition: all 0.3s ease; font-weight: 500; }
+        .genre-pill:hover { background: rgba(124,58,237,0.2); }
+        .genre-pill.active { background: #7c3aed; border-color: #7c3aed; box-shadow: 0 0 20px rgba(124,58,237,0.6); }
+        .simulate-btn { padding: 1.5rem 4rem; font-size: 1.5rem; font-weight: 700; background: linear-gradient(135deg,#7c3aed 0%,#06b6d4 100%); border: none; border-radius: 50px; color: #ffffff; cursor: pointer; transition: all 0.3s ease; box-shadow: 0 0 40px rgba(124,58,237,0.6); margin-top: 2rem; }
+        .simulate-btn:hover { transform: scale(1.05); box-shadow: 0 0 60px rgba(124,58,237,0.8); }
+        .simulate-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: scale(1); }
+
+        /* ═══════════════════════ LOADING ═══════════════════════ */
+        .loading-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(10,10,15,0.98); display: none; align-items: center; justify-content: center; flex-direction: column; z-index: 9999; }
+        .loading-overlay.active { display: flex; }
+        .loading-text { font-size: 2rem; font-weight: 600; margin-bottom: 2rem; color: #7c3aed; }
+        .progress-bar-container { width: 400px; height: 8px; background: rgba(255,255,255,0.1); border-radius: 10px; overflow: hidden; }
+        .progress-bar { height: 100%; background: linear-gradient(90deg,#7c3aed 0%,#06b6d4 100%); width: 0%; transition: width 0.5s ease; box-shadow: 0 0 20px rgba(124,58,237,0.8); }
+
+        /* ═══════════════════════ STADIUM SCREEN — contained viewport ═══════════════════════ */
+        #stadium-canvas-host { position: relative; width:100%; height:100%; }
+        #stadium-canvas-host canvas { display:block; width:100%; height:100%; }
+
+        /* scanlines + corner accents - ABSOLUTE within stadium viewport */
+        .scanlines { position:absolute; inset:0; pointer-events:none; z-index:200; background:repeating-linear-gradient(0deg,rgba(0,0,0,0) 0px,rgba(0,0,0,0) 2px,rgba(0,0,0,0.03) 2px,rgba(0,0,0,0.03) 4px); }
+        .corner-tl,.corner-tr,.corner-bl,.corner-br { position:absolute; width:30px; height:30px; z-index:60; pointer-events:none; }
+        .corner-tl { top:0; left:0; border-top:2px solid #00e5ff; border-left:2px solid #00e5ff; }
+        .corner-tr { top:0; right:0; border-top:2px solid #00e5ff; border-right:2px solid #00e5ff; }
+        .corner-bl { bottom:0; left:0; border-bottom:2px solid #00e5ff; border-left:2px solid #00e5ff; }
+        .corner-br { bottom:0; right:0; border-bottom:2px solid #00e5ff; border-right:2px solid #00e5ff; }
+
+        /* topbar - ABSOLUTE within stadium viewport */
+        .topbar { position:absolute; top:0; left:0; right:0; height:48px; background:rgba(4,8,20,0.92); border-bottom:1px solid rgba(0,255,255,0.15); display:flex; align-items:center; padding:0 20px; gap:20px; z-index:100; backdrop-filter:blur(20px); }
+        .topbar-logo { font-family:'Orbitron',monospace; font-size:20px; font-weight:900; color:#fff; letter-spacing:3px; text-shadow:0 0 20px #006eff,0 0 40px #006eff; }
+        .topbar-title { font-size:13px; color:#00e5ff; font-weight:600; letter-spacing:2px; text-transform:uppercase; border-left:1px solid rgba(0,229,255,0.3); padding-left:16px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:340px; }
+        .topbar-tabs { display:flex; gap:4px; margin-left:auto; }
+        .topbar-tab { padding:6px 18px; font-size:12px; font-weight:600; letter-spacing:1px; border-radius:4px; cursor:pointer; transition:all 0.2s; color:#64748b; border:1px solid transparent; font-family:'Inter',sans-serif; background:none; }
+        .topbar-tab.active { color:#00e5ff; border-color:rgba(0,229,255,0.4); background:rgba(0,229,255,0.08); text-shadow:0 0 10px #00e5ff; }
+        .topbar-tab:hover:not(.active) { color:#94a3b8; border-color:rgba(255,255,255,0.15); }
+        .topbar-icons { display:flex; gap:12px; align-items:center; padding-left:16px; border-left:1px solid rgba(255,255,255,0.1); }
+        .icon-btn { width:32px; height:32px; border-radius:50%; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); display:flex; align-items:center; justify-content:center; font-size:14px; cursor:pointer; transition:all 0.2s; }
+        .icon-btn:hover { background:rgba(0,229,255,0.15); border-color:#00e5ff; }
+
+        /* live badge - ABSOLUTE within stadium viewport */
+        .live-badge { position:absolute; top:64px; left:50%; transform:translateX(-50%); margin-top:8px; display:flex; align-items:center; gap:8px; background:rgba(4,11,25,0.85); border:1px solid rgba(255,50,50,0.4); border-radius:20px; padding:5px 14px; font-size:11px; font-weight:700; letter-spacing:2px; z-index:50; font-family:'Rajdhani',sans-serif; }
+        .live-dot { width:7px; height:7px; border-radius:50%; background:#ff3333; box-shadow:0 0 8px #ff3333; animation:live-pulse 1.2s infinite; }
+        @keyframes live-pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+        /* waveform - ABSOLUTE within stadium viewport */
+        .waveform-bar { position:absolute; bottom:100px; left:50%; transform:translateX(-50%); display:flex; gap:3px; align-items:flex-end; z-index:50; pointer-events:none; height:32px; }
+        .wave-seg { width:3px; background:linear-gradient(to top,#006eff,#00e5ff); border-radius:2px; opacity:0.7; animation:wave-anim var(--spd) ease-in-out infinite alternate; }
+        @keyframes wave-anim { from{height:4px} to{height:var(--h)} }
+
+        /* panels - ABSOLUTE within stadium viewport */
+        .panel { position:absolute; background:linear-gradient(135deg,rgba(4,11,25,0.88) 0%,rgba(8,18,40,0.85) 100%); border:1px solid rgba(0,229,255,0.2); border-radius:14px; padding:18px 20px; backdrop-filter:blur(24px); box-shadow:0 0 0 1px rgba(0,229,255,0.05) inset,0 8px 40px rgba(0,0,0,0.5),0 0 20px rgba(0,200,255,0.05); transition:border-color 0.3s,box-shadow 0.3s; z-index:50; font-family:'Rajdhani',sans-serif; }
+        .panel::before { content:''; position:absolute; top:0; left:20px; width:60px; height:1px; background:linear-gradient(90deg,transparent,#00e5ff,transparent); }
+        .panel:hover { border-color:rgba(0,229,255,0.5); box-shadow:0 0 0 1px rgba(0,229,255,0.1) inset,0 8px 40px rgba(0,0,0,0.6),0 0 30px rgba(0,200,255,0.15); }
+        .panel-tl { top:64px; left:16px; width:295px; }
+        .panel-tr { top:64px; right:16px; width:260px; }
+        .panel-bl { bottom:16px; left:16px; width:295px; }
+        .panel-header { display:flex; align-items:center; gap:8px; margin-bottom:14px; padding-bottom:12px; border-bottom:1px solid rgba(255,255,255,0.07); }
+        .panel-dot { width:8px; height:8px; border-radius:50%; background:#00e5ff; box-shadow:0 0 8px #00e5ff; animation:pulse-dot 2s infinite; }
+        @keyframes pulse-dot { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.5;transform:scale(0.7)} }
+        .panel-title { font-family:'Orbitron',monospace; font-size:11px; font-weight:700; letter-spacing:2px; color:#e2e8f0; text-transform:uppercase; }
+        .panel-badge { margin-left:auto; font-size:10px; font-weight:700; padding:2px 8px; border-radius:20px; background:rgba(0,229,255,0.12); color:#00e5ff; border:1px solid rgba(0,229,255,0.3); letter-spacing:1px; white-space:nowrap; }
+        .song-label { font-size:10px; color:#475569; text-transform:uppercase; letter-spacing:2px; margin-bottom:4px; }
+        .song-title { font-family:'Orbitron',monospace; font-size:15px; font-weight:700; color:#fff; letter-spacing:1px; margin-bottom:16px; text-shadow:0 0 10px rgba(255,255,255,0.3); word-break:break-word; }
+        .donut-wrap { display:flex; align-items:center; gap:18px; margin-bottom:18px; }
+        .donut { width:90px; height:90px; flex-shrink:0; position:relative; }
+        .donut svg { width:100%; height:100%; }
+        .donut-legend { flex:1; }
+        .stat-row { display:flex; align-items:center; justify-content:space-between; margin-bottom:9px; font-size:13px; font-weight:600; }
+        .stat-left { display:flex; align-items:center; gap:8px; }
+        .color-dot { width:10px; height:10px; border-radius:50%; flex-shrink:0; }
+        .stat-pct { font-family:'Orbitron',monospace; font-size:13px; font-weight:700; }
+        .bar-row { margin-bottom:10px; }
+        .bar-header { display:flex; justify-content:space-between; font-size:12px; font-weight:600; margin-bottom:5px; }
+        .bar-track { height:6px; background:rgba(255,255,255,0.07); border-radius:3px; overflow:hidden; }
+        .bar-fill { height:100%; border-radius:3px; transition:width 1s cubic-bezier(0.4,0,0.2,1); width:0%; }
+        .agents-big { font-family:'Orbitron',monospace; font-size:38px; font-weight:900; color:#fff; line-height:1; text-shadow:0 0 20px rgba(255,255,255,0.3); }
+        .agents-label { font-size:11px; color:#475569; letter-spacing:2px; text-transform:uppercase; margin-bottom:16px; margin-top:2px; }
+        .mini-stat { display:flex; align-items:center; justify-content:space-between; padding:8px 10px; border-radius:8px; margin-bottom:6px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.05); transition:background 0.2s; }
+        .mini-stat:hover { background:rgba(255,255,255,0.06); }
+        .mini-stat-left { display:flex; align-items:center; gap:8px; font-size:13px; font-weight:600; }
+        .mini-stat-pct { font-family:'Orbitron',monospace; font-size:14px; font-weight:700; }
+        .mini-icon { font-size:15px; }
+        .legend-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+        .legend-item { display:flex; align-items:center; gap:8px; padding:8px 10px; border-radius:8px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.06); font-size:12px; font-weight:600; cursor:pointer; transition:all 0.2s; }
+        .legend-item:hover { background:rgba(255,255,255,0.07); transform:translateY(-1px); }
+        .legend-color { width:12px; height:12px; border-radius:3px; flex-shrink:0; }
+
+        /* center logo - ABSOLUTE within stadium viewport */
+        .center-logo { position:absolute; bottom:24px; left:50%; transform:translateX(-50%); text-align:center; z-index:50; pointer-events:none; }
+        .brand-text { font-family:'Orbitron',monospace; font-size:28px; font-weight:900; letter-spacing:6px; color:#fff; text-shadow:0 0 20px #006eff,0 0 50px #006eff,0 0 80px rgba(0,110,255,0.4); }
+        .brand-sub { font-size:11px; color:#00e5ff; letter-spacing:3px; font-weight:700; text-transform:uppercase; opacity:0.85; }
+
+        /* ═══════════════════════ DASHBOARD SCREEN ═══════════════════════ */
+        .audience-score { text-align:center; margin-bottom:3rem; }
+        .score-title { font-size:1.5rem; color:#a0a0b0; margin-bottom:1rem; }
+        .score-value { font-size:5rem; font-weight:900; transition:color 0.5s ease; }
+        .reaction-bar-container { max-width:800px; margin:0 auto 2rem; }
+        .reaction-bar { height:40px; background:rgba(255,255,255,0.05); border-radius:20px; overflow:hidden; display:flex; }
+        .reaction-segment { height:100%; transition:width 1s ease; display:flex; align-items:center; justify-content:center; font-weight:600; font-size:0.9rem; }
+        .reaction-segment.positive { background:linear-gradient(90deg,#10b981 0%,#34d399 100%); }
+        .reaction-segment.neutral { background:linear-gradient(90deg,#f59e0b 0%,#fbbf24 100%); }
+        .reaction-segment.negative { background:linear-gradient(90deg,#ef4444 0%,#f87171 100%); }
+        .see-analytics-btn { display:block; margin:0 auto; padding:1rem 3rem; font-size:1.2rem; font-weight:600; background:rgba(124,58,237,0.2); border:2px solid #7c3aed; border-radius:50px; color:#fff; cursor:pointer; transition:all 0.3s ease; }
+        .see-analytics-btn:hover { background:#7c3aed; box-shadow:0 0 30px rgba(124,58,237,0.6); }
+        .dashboard-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(400px,1fr)); gap:2rem; margin-bottom:2rem; }
+        .dashboard-card { background:rgba(255,255,255,0.03); border:2px solid rgba(124,58,237,0.2); border-radius:20px; padding:2rem; transition:all 0.3s ease; }
+        .dashboard-card:hover { border-color:#7c3aed; box-shadow:0 0 30px rgba(124,58,237,0.3); transform:translateY(-5px); }
+        .card-title { font-size:1.5rem; font-weight:700; margin-bottom:1.5rem; color:#7c3aed; }
+        .card-full { grid-column:1/-1; }
+        .verdict-text { font-size:2rem; font-weight:600; text-align:center; margin-bottom:2rem; color:#06b6d4; }
+        .stat-pills { display:flex; gap:1rem; margin:1.5rem 0; flex-wrap:wrap; justify-content:center; }
+        .stat-pill { padding:1rem 2rem; background:rgba(255,255,255,0.05); border-radius:50px; display:flex; align-items:center; gap:0.5rem; }
+        .stat-value { font-size:1.5rem; font-weight:700; }
+        .emotion-tags { display:flex; gap:1rem; justify-content:center; flex-wrap:wrap; }
+        .emotion-tag { padding:0.75rem 1.5rem; background:rgba(124,58,237,0.2); border:2px solid #7c3aed; border-radius:50px; font-weight:600; animation:float 3s ease-in-out infinite; }
+        @keyframes float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-10px)} }
+        .agent-list { max-height:600px; overflow-y:auto; }
+        .agent-row { display:flex; align-items:center; gap:1rem; padding:1rem; background:rgba(255,255,255,0.02); border-radius:10px; margin-bottom:1rem; transition:all 0.3s ease; }
+        .agent-row:hover { background:rgba(124,58,237,0.1); transform:translateX(10px); }
+        .agent-info { flex:1; }
+        .agent-name { font-weight:600; margin-bottom:0.25rem; }
+        .agent-meta { font-size:0.9rem; color:#a0a0b0; margin-bottom:0.5rem; }
+        .agent-comment { font-style:italic; color:#06b6d4; font-size:0.9rem; margin-bottom:0.5rem; }
+        .agent-bar { height:8px; background:rgba(255,255,255,0.1); border-radius:10px; overflow:hidden; display:flex; }
+        .prediction-badge { padding:0.5rem 1rem; border-radius:20px; font-size:0.8rem; font-weight:600; white-space:nowrap; }
+        .badge-add_to_playlist { background:#10b981; }
+        .badge-share { background:#06b6d4; }
+        .badge-listen_once { background:#f59e0b; }
+        .badge-skip { background:#ef4444; }
+        .track-info-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:1rem; }
+        .track-info-item { padding:1rem; background:rgba(255,255,255,0.02); border-radius:10px; }
+        .track-info-label { font-size:0.9rem; color:#a0a0b0; margin-bottom:0.5rem; }
+        .track-info-value { font-size:1.5rem; font-weight:700; color:#7c3aed; }
+        .test-another-btn { display:block; width:100%; padding:1rem; margin-top:2rem; font-size:1.2rem; font-weight:600; background:rgba(124,58,237,0.2); border:2px solid #7c3aed; border-radius:50px; color:#fff; cursor:pointer; transition:all 0.3s ease; }
+        .test-another-btn:hover { background:#7c3aed; box-shadow:0 0 30px rgba(124,58,237,0.6); }
+
+        /* ═══════════════════════ MISC ═══════════════════════ */
+        .toast { position:fixed; bottom:2rem; right:2rem; padding:1rem 2rem; background:rgba(239,68,68,0.9); border-radius:10px; color:#fff; font-weight:600; box-shadow:0 10px 40px rgba(0,0,0,0.5); z-index:10000; animation:slideIn 0.3s ease; }
+        @keyframes slideIn { from{transform:translateX(400px);opacity:0} to{transform:translateX(0);opacity:1} }
+        #particles-bg { position:fixed; top:0; left:0; width:100%; height:100%; z-index:-1; }
+        ::-webkit-scrollbar{width:10px} ::-webkit-scrollbar-track{background:rgba(255,255,255,0.05)} ::-webkit-scrollbar-thumb{background:#7c3aed;border-radius:10px}
+        @media(max-width:768px){
+            .hero-title{font-size:3rem} .tagline{font-size:1rem} .dashboard-grid{grid-template-columns:1fr}
+            .progress-bar-container{width:300px} .track-info-grid{grid-template-columns:1fr}
+            .panel-tl,.panel-tr{width:200px} .panel-bl{width:220px}
+        }
+        @media(max-width:480px){ .panel-tr{display:none} }
+    </style>
+</head>
+<body>
+
+<canvas id="particles-bg"></canvas>
+
+<!-- ═══ UPLOAD SCREEN ═══ -->
+<div id="screen-upload" class="screen active">
+    <h1 class="hero-title glow-text">AUDIENCE LAB</h1>
+    <p class="tagline">Your digital audience. Before the world hears it.</p>
+    <div class="upload-zone" id="uploadZone">
+        <div class="upload-icon">🎵</div>
+        <div class="upload-text">Drag & drop your track or click to browse</div>
+        <div class="file-name" id="fileName"></div>
+        <input type="file" id="fileInput" accept=".mp3,.wav,.flac">
+    </div>
+    <div class="form-group">
+        <label class="form-label">Song Title (optional)</label>
+        <input type="text" class="form-input" id="songTitle" placeholder="Enter song title...">
+    </div>
+    <div class="form-group">
+        <label class="form-label">Audience Size</label>
+        <input type="range" class="slider" id="audienceSize" min="10" max="120" value="50">
+        <div class="slider-value"><span id="audienceSizeValue">50</span> agents</div>
+    </div>
+    <div class="form-group">
+        <label class="form-label">Target Genres</label>
+        <div class="genre-pills">
+            <div class="genre-pill" data-genre="trap">trap</div>
+            <div class="genre-pill" data-genre="hip-hop">hip-hop</div>
+            <div class="genre-pill" data-genre="R&B">R&B</div>
+            <div class="genre-pill" data-genre="electronic">electronic</div>
+            <div class="genre-pill" data-genre="reggaeton">reggaeton</div>
+            <div class="genre-pill" data-genre="indie">indie</div>
+        </div>
+    </div>
+    <button class="simulate-btn" id="simulateBtn">Simulate Audience</button>
+    <button class="simulate-btn" id="quickTestBtn" style="background: linear-gradient(135deg,#06b6d4 0%,#7c3aed 100%); margin-top: 1rem;">Quick Test (Skip Upload)</button>
+</div>
+
+<!-- ═══ LOADING OVERLAY ═══ -->
+<div class="loading-overlay" id="loadingOverlay">
+    <div class="loading-text" id="loadingText">Assembling your audience...</div>
+    <div class="progress-bar-container"><div class="progress-bar" id="progressBar"></div></div>
+</div>
+
+<!-- ═══ AUDIENCE SCREEN — stadium viewport + scrollable dashboard ═══ -->
+<div id="screen-audience" class="screen">
+    <!-- PAGE TITLE -->
+    <h1 style="text-align:center;font-size:3.5rem;font-weight:900;margin:2rem 0 2rem;background:linear-gradient(135deg,#7c3aed 0%,#06b6d4 100%);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;letter-spacing:0.05em;">🎭 AUDIENCE LAB</h1>
+    <p style="text-align:center;font-size:1.2rem;color:#a0a0b0;margin-bottom:3rem;font-weight:300;">Digital Twin Audience Simulation</p>
+    
+    <!-- STADIUM VIEWPORT (fixed height) -->
+    <div class="stadium-viewport">
+        <!-- THREE.js canvas injected here -->
+        <div id="stadium-canvas-host"></div>
+
+        <!-- Visual chrome (hidden until stadium active) -->
+        <div class="scanlines" id="stadiumScanlines" style="display:none"></div>
+        <div class="corner-tl" id="stadiumCornerTL" style="display:none"></div>
+        <div class="corner-tr" id="stadiumCornerTR" style="display:none"></div>
+        <div class="corner-bl" id="stadiumCornerBL" style="display:none"></div>
+        <div class="corner-br" id="stadiumCornerBR" style="display:none"></div>
+
+        <div class="topbar" id="stadiumTopbar" style="display:none">
+            <div class="topbar-logo">AUDIENCE LAB</div>
+            <div class="topbar-title" id="stadiumTopbarTitle">Digital Twin Audience Analytics</div>
+            <div class="topbar-tabs">
+                <div class="topbar-tab active" id="tabSimulation">Simulation</div>
+                <div class="topbar-tab" id="tabAnalytics">Analytics</div>
+            </div>
+            <div class="topbar-icons">
+                <div class="icon-btn">🔔</div>
+                <div class="icon-btn">👤</div>
+            </div>
+        </div>
+
+        <div class="live-badge" id="stadiumLiveBadge" style="display:none">
+            <div class="live-dot"></div>LIVE SIMULATION
+        </div>
+
+        <div class="waveform-bar" id="stadiumWaveform" style="display:none"></div>
+
+        <!-- Panel TL: song title + donut + bars -->
+        <div class="panel panel-tl" id="panelTL" style="display:none">
+        <div class="panel-header">
+            <div class="panel-dot"></div>
+            <div class="panel-title">Digital Twin Audience</div>
+            <div class="panel-badge">ACTIVE</div>
+        </div>
+        <div class="song-label">Song Title</div>
+        <div class="song-title" id="panelSongTitle">—</div>
+        <div class="donut-wrap">
+            <div class="donut"><svg id="panelDonutSVG" viewBox="0 0 100 100"></svg></div>
+            <div class="donut-legend" id="panelDonutLegend"></div>
+        </div>
+        <div id="panelBars"></div>
+    </div>
+
+    <!-- Panel TR: agent count + mini stats -->
+    <div class="panel panel-tr" id="panelTR" style="display:none">
+        <div class="panel-header">
+            <div class="panel-dot" style="background:#ffaa00;box-shadow:0 0 8px #ffaa00;animation:none"></div>
+            <div class="panel-title">Agent Summary</div>
+        </div>
+        <div class="agents-big" id="panelAgentsBig">0</div>
+        <div class="agents-label">Active Agents</div>
+        <div id="panelMiniStats"></div>
+    </div>
+
+    <!-- Panel BL: legend + see analytics button -->
+    <div class="panel panel-bl" id="panelBL" style="display:none">
+        <div class="panel-header">
+            <div class="panel-dot" style="background:#a855f7;box-shadow:0 0 8px #a855f7"></div>
+            <div class="panel-title">Section Legend</div>
+            <div class="panel-badge" id="panelLegendTotal">— TOTAL</div>
+        </div>
+            <div class="legend-grid" id="panelLegendGrid"></div>
+        </div>
+
+        <!-- Center logo -->
+        <div class="center-logo" id="stadiumCenterLogo" style="display:none">
+            <div class="brand-text">AUDIENCE LAB</div>
+            <div class="brand-sub">Digital Twin Audience</div>
+        </div>
+    </div>
+
+    <!-- DASHBOARD SECTION (scrollable, below stadium) -->
+    <div id="dashboard-section" style="background:#0a0a0f;padding:3rem 2rem;min-height:100vh;">
+        <h1 style="text-align:center;font-size:3rem;margin-bottom:2rem;background:linear-gradient(135deg,#7c3aed 0%,#06b6d4 100%);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;">📊 Detailed Analytics</h1>
+    <div class="dashboard-grid">
+        <div class="dashboard-card"><h2 class="card-title">Track DNA</h2><canvas id="radarChart"></canvas></div>
+        <div class="dashboard-card"><h2 class="card-title">Reaction Breakdown</h2><canvas id="barChart"></canvas></div>
+        <div class="dashboard-card card-full"><h2 class="card-title">Emotional Map</h2><canvas id="bubbleChart"></canvas></div>
+        <div class="dashboard-card">
+            <h2 class="card-title">Audience Verdict</h2>
+            <div class="verdict-text" id="verdictText"></div>
+            <div class="stat-pills" id="statPills"></div>
+            <div class="emotion-tags" id="emotionTags"></div>
+        </div>
+        <div class="dashboard-card card-full">
+            <h2 class="card-title">🎯 Spotify Benchmarking</h2>
+            <div id="spotifyBenchmark">
+                <div class="loading-text" id="spotifyLoading" style="display:none;font-size:1.2rem;text-align:center;margin:2rem 0">Loading Spotify data...</div>
+                <div id="benchmarkResults">
+                    <div class="verdict-text" id="benchmarkScore" style="font-size:1.5rem;margin-bottom:1rem"></div>
+                    <div id="benchmarkPlaylists"></div>
+                    <div style="margin-top:1.5rem"><h3 style="color:#7c3aed;margin-bottom:1rem">Top Similar Tracks</h3><div id="similarTracks"></div></div>
+                    <div style="margin-top:1.5rem;padding:1rem;background:rgba(124,58,237,0.1);border-radius:10px;border-left:4px solid #7c3aed">
+                        <p id="benchmarkRecommendation" style="font-style:italic;color:#06b6d4"></p>
+                    </div>
+                    <div id="aiRecommendations" style="margin-top:1.5rem"></div>
+                </div>
+            </div>
+        </div>
+        <div class="dashboard-card card-full"><h2 class="card-title">Agent Details</h2><div class="agent-list" id="agentList"></div></div>
+        <div class="dashboard-card">
+            <h2 class="card-title">Track Info</h2>
+            <div class="track-info-grid" id="trackInfo"></div>
+            <button class="test-another-btn" id="testAnotherBtn">Test Another Song</button>
+        </div>
+        </div>
+    </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     MAIN APPLICATION SCRIPT
+═══════════════════════════════════════════════════════════════ -->
+<script>
+const API_BASE = 'http://localhost:8000';
+let currentFile=null, selectedGenres=[], analysisData=null, agentsData=null, reactionsData=null;
+let stadiumAnimId=null, stadiumRenderer=null;
+
+/* ── Particle background (upload screen) ── */
+const bgCanvas = document.getElementById('particles-bg');
+const bgCtx = bgCanvas.getContext('2d');
+bgCanvas.width = window.innerWidth; bgCanvas.height = window.innerHeight;
+const bgParticles = [];
+for(let i=0;i<100;i++) bgParticles.push({x:Math.random()*bgCanvas.width,y:Math.random()*bgCanvas.height,vx:(Math.random()-0.5)*0.5,vy:(Math.random()-0.5)*0.5,size:Math.random()*2});
+(function animBG(){
+    bgCtx.clearRect(0,0,bgCanvas.width,bgCanvas.height);
+    bgCtx.fillStyle='rgba(124,58,237,0.5)';
+    bgParticles.forEach(p=>{p.x+=p.vx;p.y+=p.vy;if(p.x<0||p.x>bgCanvas.width)p.vx*=-1;if(p.y<0||p.y>bgCanvas.height)p.vy*=-1;bgCtx.beginPath();bgCtx.arc(p.x,p.y,p.size,0,Math.PI*2);bgCtx.fill();});
+    requestAnimationFrame(animBG);
+})();
+window.addEventListener('resize',()=>{bgCanvas.width=window.innerWidth;bgCanvas.height=window.innerHeight;});
+
+/* ── Upload ── */
+const uploadZone=document.getElementById('uploadZone'),fileInput=document.getElementById('fileInput'),fileNameEl=document.getElementById('fileName');
+const audienceSizeEl=document.getElementById('audienceSize'),audienceSizeValEl=document.getElementById('audienceSizeValue');
+const genrePills=document.querySelectorAll('.genre-pill'),simulateBtn=document.getElementById('simulateBtn'),songTitleInput=document.getElementById('songTitle');
+
+uploadZone.addEventListener('click',()=>fileInput.click());
+uploadZone.addEventListener('dragover',e=>{e.preventDefault();uploadZone.style.background='rgba(124,58,237,0.15)';});
+uploadZone.addEventListener('dragleave',()=>uploadZone.style.background='');
+uploadZone.addEventListener('drop',e=>{e.preventDefault();uploadZone.style.background='';if(e.dataTransfer.files.length>0)handleFile(e.dataTransfer.files[0]);});
+fileInput.addEventListener('change',e=>{if(e.target.files.length>0)handleFile(e.target.files[0]);});
+function handleFile(f){const ok=['audio/mpeg','audio/wav','audio/flac','audio/x-wav'];if(!ok.includes(f.type)&&!f.name.match(/\.(mp3|wav|flac)$/i)){showToast('Please upload MP3, WAV or FLAC');return;}currentFile=f;fileNameEl.textContent=f.name;}
+audienceSizeEl.addEventListener('input',e=>audienceSizeValEl.textContent=e.target.value);
+genrePills.forEach(p=>p.addEventListener('click',()=>{p.classList.toggle('active');const g=p.dataset.genre;selectedGenres=selectedGenres.includes(g)?selectedGenres.filter(x=>x!==g):[...selectedGenres,g];}));
+simulateBtn.addEventListener('click',async()=>{
+    if(!currentFile){showToast('Please upload a file first');return;}
+    if(!selectedGenres.length){showToast('Please select at least one genre');return;}
+    await runSimulation();
+});
+
+/* ── Quick Test Button (provisional) ── */
+document.getElementById('quickTestBtn').addEventListener('click', async()=>{
+    showLoading('Generating test data...',50);
+    // Generate mock data
+    const numAgents = parseInt(audienceSizeEl.value);
+    const predictions = ['add_to_playlist', 'share', 'listen_once', 'skip'];
+    const emotions = ['hyped', 'relaxed', 'energized', 'neutral', 'bored'];
+    const comments = [
+        'This is fire!', 'Love the vibe', 'Not my style', 'Pretty good',
+        'Amazing production', 'Could be better', 'Instant playlist add',
+        'Meh, skip', 'Catchy chorus', 'Boring'
+    ];
+    
+    analysisData = {
+        title: songTitleInput.value || 'Test Song',
+        bpm: 120 + Math.floor(Math.random() * 60),
+        key: ['C', 'D', 'E', 'F', 'G', 'A', 'B'][Math.floor(Math.random() * 7)],
+        energy: Math.random(),
+        catchiness_score: 50 + Math.floor(Math.random() * 50),
+        loudness_db: -10 + Math.random() * 5,
+        spectral_brightness: Math.random(),
+        duration_seconds: 180 + Math.floor(Math.random() * 120),
+        transcript: 'Test lyrics...'
+    };
+    
+    agentsData = { agents: [] };
+    for(let i = 0; i < numAgents; i++) {
+        agentsData.agents.push({
+            name: `Agent ${i + 1}`,
+            age: 18 + Math.floor(Math.random() * 40),
+            city: ['New York', 'London', 'Tokyo', 'Paris', 'Berlin'][Math.floor(Math.random() * 5)],
+            country: ['USA', 'UK', 'Japan', 'France', 'Germany'][Math.floor(Math.random() * 5)]
+        });
+    }
+    
+    reactionsData = { reactions: [], summary: {} };
+    for(let i = 0; i < numAgents; i++) {
+        const pred = predictions[Math.floor(Math.random() * predictions.length)];
+        reactionsData.reactions.push({
+            agent_name: `Agent ${i + 1}`,
+            streaming_prediction: pred,
+            emotional_response: emotions[Math.floor(Math.random() * emotions.length)],
+            comment: comments[Math.floor(Math.random() * comments.length)],
+            skip_probability: Math.random(),
+            replay_probability: Math.random(),
+            share_probability: Math.random()
+        });
+    }
+    
+    // Calculate summary
+    const avgSkip = reactionsData.reactions.reduce((s, r) => s + r.skip_probability, 0) / numAgents;
+    const avgReplay = reactionsData.reactions.reduce((s, r) => s + r.replay_probability, 0) / numAgents;
+    const avgShare = reactionsData.reactions.reduce((s, r) => s + r.share_probability, 0) / numAgents;
+    
+    reactionsData.summary = {
+        avg_skip_probability: avgSkip,
+        avg_replay_probability: avgReplay,
+        avg_share_probability: avgShare,
+        predicted_audience_fit: avgSkip < 0.3 ? 'Strong Fit' : avgSkip < 0.6 ? 'Moderate Fit' : 'Weak Fit',
+        top_emotional_responses: ['hyped', 'energized', 'relaxed']
+    };
+    
+    setTimeout(() => {
+        hideLoading();
+        showAudienceScreen();
+    }, 800);
+});
+
+/* ── Simulation pipeline ── */
+async function runSimulation(){
+    try{
+        simulateBtn.disabled=true;
+        showLoading('Analyzing your track...',0);
+        const fd=new FormData(); fd.append('file',currentFile); if(songTitleInput.value) fd.append('title',songTitleInput.value);
+        const r1=await fetch(`${API_BASE}/analyze`,{method:'POST',body:fd});
+        if(!r1.ok) throw new Error('Analysis failed');
+        analysisData=await r1.json();
+
+        showLoading('Assembling your audience...',33);
+        const r2=await fetch(`${API_BASE}/generate-agents`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({num_agents:parseInt(audienceSizeEl.value),music_genre:selectedGenres.join(', ')})});
+        if(!r2.ok) throw new Error('Agent generation failed');
+        agentsData=await r2.json();
+
+        showLoading('Simulating reactions...',66);
+        const r3=await fetch(`${API_BASE}/simulate-reactions`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({song_title:analysisData.title,song_analysis:{bpm:analysisData.bpm,key:analysisData.key,energy:analysisData.energy,catchiness_score:analysisData.catchiness_score,transcript:analysisData.transcript},agents:agentsData.agents})});
+        if(!r3.ok) throw new Error('Reaction simulation failed');
+        reactionsData=await r3.json();
+
+        showLoading('Building stadium...',100);
+        setTimeout(()=>{hideLoading();showAudienceScreen();},400);
+    }catch(err){showToast('Simulation failed: '+err.message);hideLoading();simulateBtn.disabled=false;}
+}
+function showLoading(txt,pct){document.getElementById('loadingOverlay').classList.add('active');document.getElementById('loadingText').textContent=txt;document.getElementById('progressBar').style.width=pct+'%';}
+function hideLoading(){document.getElementById('loadingOverlay').classList.remove('active');}
+
+/* ── Show audience screen ── */
+function showAudienceScreen(){
+    switchScreen('screen-audience');
+    setTimeout(()=>{
+        showStadiumChrome();
+        init3DStadium();
+        buildPanels();
+        renderCharts();
+        renderVerdict();
+        renderSpotifyBenchmark();
+        renderAgentList();
+        renderTrackInfo();
+    },100);
+}
+function showStadiumChrome(){
+    ['stadiumScanlines','stadiumCornerTL','stadiumCornerTR','stadiumCornerBL','stadiumCornerBR',
+     'stadiumTopbar','stadiumLiveBadge','stadiumWaveform','panelTL','panelTR','panelBL','stadiumCenterLogo'].forEach(id=>{
+        const el=document.getElementById(id); if(el) el.style.display='';
+    });
+    // Build waveform
+    const wf=document.getElementById('stadiumWaveform'); wf.innerHTML='';
+    for(let i=0;i<40;i++){const d=document.createElement('div');d.className='wave-seg';const h=6+Math.random()*22;d.style.setProperty('--h',h+'px');d.style.setProperty('--spd',(0.3+Math.random()*0.6)+'s');d.style.height=h+'px';wf.appendChild(d);}
+}
+
+/* ── Build dynamic panels from reactionsData ── */
+function buildPanels(){
+    const reactions=reactionsData.reactions;
+    const total=reactions.length;
+    const SECTOR_DEFS={
+        add_to_playlist:{color:'#00ff44',glow:'#00ff44',icon:'🎵',label:'Playlist Add',longLabel:'Add to Playlist',secIdx:0},
+        share:          {color:'#0088ff',glow:'#0088ff',icon:'📤',label:'Share',       longLabel:'Share Song',     secIdx:1},
+        listen_once:    {color:'#ffaa00',glow:'#ffaa00',icon:'🎧',label:'Listen Once', longLabel:'Listen Once & Done',secIdx:2},
+        skip:           {color:'#ff2222',glow:'#ff2222',icon:'🚫',label:'Dislike',     longLabel:'Dislike',        secIdx:3}
+    };
+    const counts={};
+    Object.keys(SECTOR_DEFS).forEach(k=>counts[k]=0);
+    reactions.forEach(r=>{if(counts[r.streaming_prediction]!==undefined)counts[r.streaming_prediction]++;});
+    const activeSectors=Object.keys(SECTOR_DEFS).filter(k=>counts[k]>0);
+
+    // Song title
+    document.getElementById('panelSongTitle').textContent=(analysisData.title||songTitleInput.value||'Untitled').toUpperCase();
+    document.getElementById('stadiumTopbarTitle').textContent=(analysisData.title||'Digital Twin Audience')+' — Digital Twin Analytics';
+    document.getElementById('panelAgentsBig').textContent=total;
+    document.getElementById('panelLegendTotal').textContent=total+' TOTAL';
+
+    // SVG Donut
+    const circumference=2*Math.PI*38; // r=38
+    let offsetAcc=0;
+    let svgCircles='<circle cx="50" cy="50" r="38" fill="none" stroke="rgba(255,255,255,0.05)" stroke-width="14"/>';
+    activeSectors.forEach(k=>{
+        const pct=counts[k]/total;
+        const dash=pct*circumference;
+        const gap=circumference-dash;
+        svgCircles+=`<circle cx="50" cy="50" r="38" fill="none" stroke="${SECTOR_DEFS[k].color}" stroke-width="14" stroke-dasharray="${dash.toFixed(1)} ${gap.toFixed(1)}" stroke-dashoffset="${(-offsetAcc).toFixed(1)}" stroke-linecap="round" transform="rotate(-90 50 50)"/>`;
+        offsetAcc+=dash;
+    });
+    svgCircles+=`<text x="50" y="46" text-anchor="middle" fill="white" font-size="10" font-family="Orbitron,monospace" font-weight="700">${total}</text>`;
+    svgCircles+=`<text x="50" y="58" text-anchor="middle" fill="#475569" font-size="6.5" font-family="Rajdhani,sans-serif" letter-spacing="1">AGENTS</text>`;
+    document.getElementById('panelDonutSVG').innerHTML=svgCircles;
+
+    // Donut legend
+    document.getElementById('panelDonutLegend').innerHTML=activeSectors.map(k=>{
+        const pct=Math.round(counts[k]/total*100);
+        return`<div class="stat-row"><div class="stat-left"><div class="color-dot" style="background:${SECTOR_DEFS[k].color};box-shadow:0 0 6px ${SECTOR_DEFS[k].color}"></div><span style="color:#cbd5e1">${SECTOR_DEFS[k].label}</span></div><span class="stat-pct" style="color:${SECTOR_DEFS[k].color}">${pct}%</span></div>`;
+    }).join('');
+
+    // Bars: engagement score and viral potential
+    const engScore=Math.round((1-reactionsData.summary.avg_skip_probability)*100);
+    const viralScore=Math.round(reactionsData.summary.avg_share_probability*100);
+    document.getElementById('panelBars').innerHTML=`
+        <div class="bar-row">
+            <div class="bar-header"><span style="color:#94a3b8;font-size:11px">ENGAGEMENT SCORE</span><span style="color:#00e5ff;font-family:Orbitron,monospace;font-size:11px">${engScore}/100</span></div>
+            <div class="bar-track"><div class="bar-fill" style="width:${engScore}%;background:linear-gradient(90deg,#006eff,#00e5ff);box-shadow:0 0 8px #00e5ff"></div></div>
+        </div>
+        <div class="bar-row">
+            <div class="bar-header"><span style="color:#94a3b8;font-size:11px">VIRAL POTENTIAL</span><span style="color:#00ff44;font-family:Orbitron,monospace;font-size:11px">${viralScore}%</span></div>
+            <div class="bar-track"><div class="bar-fill" style="width:${viralScore}%;background:linear-gradient(90deg,#00aa33,#00ff44);box-shadow:0 0 8px #00ff44"></div></div>
+        </div>`;
+
+    // Mini stats (TR panel)
+    document.getElementById('panelMiniStats').innerHTML=activeSectors.map(k=>{
+        const pct=Math.round(counts[k]/total*100);
+        return`<div class="mini-stat"><div class="mini-stat-left"><span class="mini-icon">${SECTOR_DEFS[k].icon}</span><span style="color:${SECTOR_DEFS[k].color}">${SECTOR_DEFS[k].longLabel}</span></div><span class="mini-stat-pct" style="color:${SECTOR_DEFS[k].color}">~${pct}%</span></div>`;
+    }).join('');
+
+    // Legend grid (BL panel)
+    document.getElementById('panelLegendGrid').innerHTML=activeSectors.map(k=>`
+        <div class="legend-item"><div class="legend-color" style="background:${SECTOR_DEFS[k].color};box-shadow:0 0 6px ${SECTOR_DEFS[k].color}"></div>${SECTOR_DEFS[k].label}</div>`).join('');
+}
+
+/* ── Tab navigation (Analytics tab scrolls to dashboard section) ── */
+document.getElementById('tabAnalytics').addEventListener('click',()=>{
+    document.getElementById('dashboard-section').scrollIntoView({behavior:'smooth'});
+});
+document.getElementById('tabSimulation').addEventListener('click',()=>{
+    document.querySelector('.stadium-viewport').scrollIntoView({behavior:'smooth'});
+});
+
+/* ── Dashboard renders ── */
+function renderCharts(){
+    const radarCtx=document.getElementById('radarChart').getContext('2d');
+    const normalizedBPM=((analysisData.bpm-60)/(200-60))*100;
+    new Chart(radarCtx,{type:'radar',data:{labels:['BPM','Energy','Catchiness','Brightness','Loudness'],datasets:[{label:'Track DNA',data:[Math.max(0,Math.min(100,normalizedBPM)),analysisData.energy*100,analysisData.catchiness_score,analysisData.spectral_brightness*100,Math.min((analysisData.loudness_db+60)/60,1)*100],backgroundColor:'rgba(124,58,237,0.2)',borderColor:'#7c3aed',borderWidth:2,pointBackgroundColor:'#7c3aed'}]},options:{scales:{r:{beginAtZero:true,max:100,ticks:{color:'#a0a0b0'},grid:{color:'rgba(255,255,255,0.1)'},pointLabels:{color:'#ffffff'}}},plugins:{legend:{labels:{color:'#ffffff'}}}}});
+    const barCtx=document.getElementById('barChart').getContext('2d');
+    const sortedRx=[...reactionsData.reactions].sort((a,b)=>b.replay_probability-a.replay_probability).slice(0,10);
+    new Chart(barCtx,{type:'bar',data:{labels:sortedRx.map(r=>r.agent_name),datasets:[{label:'Skip',data:sortedRx.map(r=>r.skip_probability*100),backgroundColor:'#ef4444'},{label:'Replay',data:sortedRx.map(r=>r.replay_probability*100),backgroundColor:'#10b981'}]},options:{indexAxis:'y',scales:{x:{stacked:false,ticks:{color:'#a0a0b0'},grid:{color:'rgba(255,255,255,0.1)'}},y:{stacked:false,ticks:{color:'#a0a0b0'},grid:{color:'rgba(255,255,255,0.1)'}}},plugins:{legend:{labels:{color:'#ffffff'}}}}});
+    const bubbleCtx=document.getElementById('bubbleChart').getContext('2d');
+    const emoColors={hyped:'#f97316',relaxed:'#06b6d4',melancholic:'#3b82f6',energized:'#fbbf24',neutral:'#9ca3af',bored:'#6b7280',annoyed:'#ef4444',energetic:'#fbbf24'};
+    new Chart(bubbleCtx,{type:'bubble',data:{datasets:reactionsData.reactions.map(r=>({label:r.agent_name,data:[{x:r.skip_probability*100,y:r.replay_probability*100,r:Math.max(12,r.share_probability*30)}],backgroundColor:emoColors[r.emotional_response]||'#9ca3af'}))},options:{scales:{x:{title:{display:true,text:'Skip Probability',color:'#fff'},ticks:{color:'#a0a0b0'},grid:{color:'rgba(255,255,255,0.1)'}},y:{title:{display:true,text:'Replay Probability',color:'#fff'},ticks:{color:'#a0a0b0'},grid:{color:'rgba(255,255,255,0.1)'}}},plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>{const r=reactionsData.reactions[ctx.datasetIndex];return`${r.agent_name}: "${r.comment}"`}}}}}});
+}
+function renderVerdict(){
+    document.getElementById('verdictText').textContent=reactionsData.summary.predicted_audience_fit;
+    document.getElementById('statPills').innerHTML=`<div class="stat-pill"><span>⏭️</span><span class="stat-value">${Math.round(reactionsData.summary.avg_skip_probability*100)}%</span> Skip</div><div class="stat-pill"><span>🔁</span><span class="stat-value">${Math.round(reactionsData.summary.avg_replay_probability*100)}%</span> Replay</div><div class="stat-pill"><span>📤</span><span class="stat-value">${Math.round(reactionsData.summary.avg_share_probability*100)}%</span> Share</div>`;
+    document.getElementById('emotionTags').innerHTML=reactionsData.summary.top_emotional_responses.map(e=>`<div class="emotion-tag">${e}</div>`).join('');
+}
+async function renderSpotifyBenchmark(){
+    try{
+        document.getElementById('spotifyLoading').style.display='block';
+        document.getElementById('benchmarkResults').style.display='none';
+        const res=await fetch(`${API_BASE}/benchmark`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({song_analysis:{bpm:analysisData.bpm,key:analysisData.key,energy:analysisData.energy,catchiness_score:analysisData.catchiness_score,loudness_db:analysisData.loudness_db,spectral_brightness:analysisData.spectral_brightness},genres:selectedGenres})});
+        if(!res.ok) throw new Error('Benchmark failed');
+        const bd=await res.json();
+        
+        // Store AI recommendations in analysisData for later use
+        if(bd.ai_recommendations && bd.ai_recommendations.length > 0){
+            analysisData.ai_recommendations = bd.ai_recommendations;
+        }
+        
+        document.getElementById('spotifyLoading').style.display='none';
+        document.getElementById('benchmarkResults').style.display='block';
+        const sc=document.getElementById('benchmarkScore');
+        sc.textContent=`Overall Similarity: ${bd.similarity_score}%`;
+        sc.style.color=bd.similarity_score>=70?'#10b981':bd.similarity_score>=45?'#fbbf24':'#ef4444';
+        document.getElementById('benchmarkPlaylists').innerHTML=bd.playlist_benchmarks.map(p=>`<div style="padding:1rem;background:rgba(255,255,255,0.02);border-radius:10px;margin-bottom:1rem;border-left:4px solid ${p.fit_label==='Strong fit'?'#10b981':p.fit_label==='Moderate fit'?'#fbbf24':'#ef4444'}"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.5rem"><h4 style="color:#7c3aed;font-size:1.1rem">${p.playlist_name}</h4><span style="padding:.25rem .75rem;background:${p.fit_label==='Strong fit'?'#10b981':p.fit_label==='Moderate fit'?'#fbbf24':'#ef4444'};border-radius:20px;font-size:.8rem;font-weight:600">${p.fit_label}</span></div><div style="display:grid;grid-template-columns:repeat(2,1fr);gap:.5rem;font-size:.9rem;color:#a0a0b0"><div>Your BPM: <span style="color:#fff;font-weight:600">${p.your_song_bpm}</span></div><div>Playlist Avg: <span style="color:#fff;font-weight:600">${p.avg_bpm}</span></div><div>Your Energy: <span style="color:#fff;font-weight:600">${(p.your_song_energy*100).toFixed(0)}%</span></div><div>Playlist Avg: <span style="color:#fff;font-weight:600">${(p.avg_energy*100).toFixed(0)}%</span></div></div></div>`).join('');
+        // FIXED: Show viral tracks analysis with success correlation
+        const viralTracks = bd.top_similar_tracks.filter(t => t.popularity >= 60);
+        const avgPop = viralTracks.length > 0 ? (viralTracks.reduce((s,t)=>s+t.popularity,0)/viralTracks.length).toFixed(1) : 0;
+        const avgSim = viralTracks.length > 0 ? (viralTracks.reduce((s,t)=>s+t.similarity,0)/viralTracks.length).toFixed(1) : 0;
+        let successMsg = '';
+        if (viralTracks.length > 0) {
+            if (avgSim >= 70 && avgPop >= 75) successMsg = '<div style="padding:1rem;background:rgba(16,185,129,0.15);border-radius:8px;margin-bottom:1rem;border-left:4px solid #10b981"><strong style="color:#10b981">🔥 High Viral Potential!</strong><br><small>Your song is highly similar to successful viral tracks</small></div>';
+            else if (avgSim >= 50 && avgPop >= 60) successMsg = '<div style="padding:1rem;background:rgba(245,158,11,0.15);border-radius:8px;margin-bottom:1rem;border-left:4px solid #f59e0b"><strong style="color:#f59e0b">⚡ Moderate Viral Potential</strong><br><small>Good similarity with popular tracks</small></div>';
+            else successMsg = '<div style="padding:1rem;background:rgba(107,114,128,0.15);border-radius:8px;margin-bottom:1rem;border-left:4px solid #6b7280"><strong style="color:#6b7280">💡 Unique Sound</strong><br><small>Different from mainstream - niche appeal</small></div>';
+        }
+        const statsHTML = viralTracks.length > 0 ? `<div style="padding:1rem;background:rgba(124,58,237,0.1);border-radius:8px;margin-bottom:1rem;display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;text-align:center"><div><div style="font-size:1.5rem;font-weight:700;color:#7c3aed">${viralTracks.length}</div><div style="font-size:.85rem;color:#a0a0b0">Viral Tracks</div></div><div><div style="font-size:1.5rem;font-weight:700;color:#7c3aed">${avgSim}%</div><div style="font-size:.85rem;color:#a0a0b0">Avg Similarity</div></div><div><div style="font-size:1.5rem;font-weight:700;color:#7c3aed">${avgPop}</div><div style="font-size:.85rem;color:#a0a0b0">Avg Popularity</div></div></div>` : '';
+        document.getElementById('similarTracks').innerHTML = successMsg + statsHTML + (viralTracks.length > 0 ? viralTracks : bd.top_similar_tracks).map((t,i)=>`<div style="padding:.75rem;background:rgba(124,58,237,0.1);border-radius:8px;margin-bottom:.5rem;display:flex;justify-content:space-between;align-items:center"><div><div style="font-weight:600">${i+1}. ${t.name}</div><div style="font-size:.9rem;color:#a0a0b0">${t.artist} ${t.popularity>=60?'🔥':''}</div></div><div style="text-align:right"><div style="font-size:1.2rem;font-weight:700;color:#7c3aed">${typeof t.similarity === 'number' ? t.similarity.toFixed(1) : t.similarity}%</div><div style="font-size:.75rem;color:#a0a0b0">Pop: ${t.popularity}</div></div></div>`).join('');
+        document.getElementById('benchmarkRecommendation').textContent=bd.recommendation;
+        
+        // Render AI Recommendations
+        if (bd.ai_recommendations && bd.ai_recommendations.length > 0) {
+            const priorityColors = {critical:'#ef4444',high:'#f59e0b',medium:'#06b6d4',low:'#6b7280'};
+            const priorityIcons = {critical:'🚨',high:'⚡',medium:'💡',low:'ℹ️'};
+            document.getElementById('aiRecommendations').innerHTML = `
+                <h3 style="color:#7c3aed;margin-bottom:1rem;font-size:1.3rem">🤖 AI Production Recommendations</h3>
+                <p style="color:#a0a0b0;margin-bottom:1.5rem;font-size:.95rem">Data-driven suggestions based on mathematical analysis of ${viralTracks.length} viral tracks</p>
+                ${bd.ai_recommendations.map((rec,i)=>{
+                    const color = priorityColors[rec.priority] || '#6b7280';
+                    const icon = priorityIcons[rec.priority] || '💡';
+                    return `
+                        <div style="padding:1.25rem;background:rgba(255,255,255,0.02);border-radius:12px;margin-bottom:1rem;border-left:4px solid ${color}">
+                            <div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:.75rem">
+                                <div style="flex:1">
+                                    <div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.5rem">
+                                        <span style="font-size:1.2rem">${icon}</span>
+                                        <h4 style="color:#fff;font-size:1.1rem;margin:0">${rec.metric}</h4>
+                                        <span style="padding:.2rem .6rem;background:${color};border-radius:12px;font-size:.7rem;font-weight:600;text-transform:uppercase">${rec.priority}</span>
+                                    </div>
+                                    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;margin-bottom:.75rem;padding:.75rem;background:rgba(0,0,0,0.2);border-radius:8px">
+                                        <div><div style="font-size:.75rem;color:#a0a0b0;margin-bottom:.25rem">Current</div><div style="font-size:1.1rem;font-weight:700;color:#fff">${typeof rec.current === 'number' ? rec.current.toFixed(1) : rec.current}</div></div>
+                                        <div><div style="font-size:.75rem;color:#a0a0b0;margin-bottom:.25rem">Target</div><div style="font-size:1.1rem;font-weight:700;color:#10b981">${typeof rec.target === 'number' ? rec.target.toFixed(1) : rec.target}</div></div>
+                                        <div><div style="font-size:.75rem;color:#a0a0b0;margin-bottom:.25rem">Impact</div><div style="font-size:1.1rem;font-weight:700;color:${color}">${rec.impact_score.toFixed(0)}%</div></div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div style="padding:.75rem;background:rgba(124,58,237,0.1);border-radius:8px;margin-bottom:.5rem">
+                                <div style="font-size:.85rem;color:#06b6d4;font-weight:600;margin-bottom:.25rem">📋 Action Required:</div>
+                                <p style="margin:0;color:#fff;line-height:1.5">${rec.action}</p>
+                            </div>
+                            <div style="padding:.75rem;background:rgba(0,0,0,0.2);border-radius:8px">
+                                <div style="font-size:.85rem;color:#a0a0b0;font-weight:600;margin-bottom:.25rem">🔧 Technical Details:</div>
+                                <p style="margin:0;color:#a0a0b0;font-size:.85rem;line-height:1.5">${rec.technical_note}</p>
+                            </div>
+                        </div>
+                    `;
+                }).join('')}
+                <button id="optimizeBtn" style="width:100%;padding:1rem;background:linear-gradient(135deg,#7c3aed,#a855f7);border:none;border-radius:12px;color:#fff;font-size:1.1rem;font-weight:700;cursor:pointer;margin-top:1.5rem;box-shadow:0 4px 20px rgba(124,58,237,0.4);transition:all 0.3s ease" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 6px 30px rgba(124,58,237,0.6)'" onmouseout="this.style.transform='translateY(0)';this.style.boxShadow='0 4px 20px rgba(124,58,237,0.4)'">
+                    <span id="optimizeBtnText">🎵 Auto-Optimize Track</span>
+                </button>
+            `;
+            document.getElementById('optimizeBtn').onclick = optimizeAudio;
+        } else {
+            document.getElementById('aiRecommendations').innerHTML = '';
+        }
+    }catch(e){
+        document.getElementById('spotifyLoading').style.display='none';
+        document.getElementById('benchmarkResults').innerHTML=`<p style="color:#ef4444;text-align:center">Spotify benchmarking failed. Check credentials in .env</p>`;
+        document.getElementById('benchmarkResults').style.display='block';
+    }
+}
+async function optimizeAudio(){
+    const btn=document.getElementById('optimizeBtn');
+    const btnText=document.getElementById('optimizeBtnText');
+    try{
+        btn.disabled=true;
+        btnText.textContent='⏳ Optimizing...';
+        
+        // Validate data exists
+        if(!currentFile){
+            throw new Error('No audio file loaded');
+        }
+        if(!analysisData || !analysisData.ai_recommendations){
+            throw new Error('No AI recommendations available');
+        }
+        
+        const fd=new FormData();
+        fd.append('file',currentFile);
+        fd.append('recommendations',JSON.stringify(analysisData.ai_recommendations));
+        
+        const r=await fetch(`${API_BASE}/optimize-audio`,{method:'POST',body:fd});
+        if(!r.ok){
+            const errorText = await r.text();
+            console.error('Server error:', errorText);
+            throw new Error(`Server error: ${r.status}`);
+        }
+        
+        const blob=await r.blob();
+        const url=URL.createObjectURL(blob);
+        
+        // Show audio player
+        const playerHTML=`
+            <div id="optimizedPlayer" style="margin-top:1.5rem;padding:1.5rem;background:rgba(124,58,237,0.1);border-radius:12px;border:2px solid rgba(124,58,237,0.3)">
+                <h4 style="color:#7c3aed;margin-bottom:1rem">🎧 Preview Optimized Track</h4>
+                <audio controls style="width:100%;margin-bottom:1rem" src="${url}"></audio>
+                <button onclick="downloadOptimized('${url}','${currentFile.name}')" style="width:100%;padding:.75rem;background:#10b981;border:none;border-radius:8px;color:#fff;font-weight:600;cursor:pointer;transition:all 0.3s" onmouseover="this.style.background='#059669'" onmouseout="this.style.background='#10b981'">
+                    💾 Download MP3
+                </button>
+            </div>
+        `;
+        // Remove existing player if any
+        const existingPlayer = document.getElementById('optimizedPlayer');
+        if(existingPlayer) existingPlayer.remove();
+        document.getElementById('aiRecommendations').insertAdjacentHTML('beforeend',playerHTML);
+        
+        btnText.textContent='✅ Optimization Complete!';
+        btn.disabled=false;
+    }catch(e){
+        console.error('Optimization error:',e);
+        btnText.textContent='❌ '+e.message;
+        setTimeout(()=>{btnText.textContent='🎵 Auto-Optimize Track';btn.disabled=false;},3000);
+    }
+}
+
+function downloadOptimized(url,originalName){
+    const a=document.createElement('a');
+    a.href=url;
+    a.download=`optimized_${originalName.replace(/\.[^/.]+$/,'.mp3')}`;
+    a.click();
+}
+function renderAgentList(){
+    document.getElementById('agentList').innerHTML=reactionsData.reactions.map(r=>{
+        const a=agentsData.agents.find(x=>x.name===r.agent_name);
+        return`<div class="agent-row"><div class="agent-info"><div class="agent-name">${r.agent_name}</div><div class="agent-meta">${a.age} • ${a.city}, ${a.country}</div><div class="agent-comment">"${r.comment}"</div><div class="agent-bar"><div style="width:${r.replay_probability*100}%;background:#10b981;height:100%"></div><div style="width:${r.skip_probability*100}%;background:#ef4444;height:100%"></div></div></div><div class="prediction-badge badge-${r.streaming_prediction}">${r.streaming_prediction.replace(/_/g,' ')}</div></div>`;
+    }).join('');
+}
+function renderTrackInfo(){
+    document.getElementById('trackInfo').innerHTML=`<div class="track-info-item"><div class="track-info-label">Title</div><div class="track-info-value">${analysisData.title}</div></div><div class="track-info-item"><div class="track-info-label">BPM</div><div class="track-info-value">${analysisData.bpm}</div></div><div class="track-info-item"><div class="track-info-label">Key</div><div class="track-info-value">${analysisData.key}</div></div><div class="track-info-item"><div class="track-info-label">Duration</div><div class="track-info-value">${Math.floor(analysisData.duration_seconds/60)}:${String(Math.floor(analysisData.duration_seconds%60)).padStart(2,'0')}</div></div>`;
+}
+
+/* ── Reset ── */
+document.getElementById('testAnotherBtn').addEventListener('click',()=>{
+    currentFile=null; selectedGenres=[]; analysisData=null; agentsData=null; reactionsData=null;
+    fileNameEl.textContent=''; songTitleInput.value='';
+    audienceSizeEl.value=50; audienceSizeValEl.textContent='50';
+    genrePills.forEach(p=>p.classList.remove('active'));
+    simulateBtn.disabled=false;
+    if(stadiumAnimId){cancelAnimationFrame(stadiumAnimId);stadiumAnimId=null;}
+    if(stadiumRenderer){stadiumRenderer.dispose();stadiumRenderer=null;}
+    ['stadiumScanlines','stadiumCornerTL','stadiumCornerTR','stadiumCornerBL','stadiumCornerBR',
+     'stadiumTopbar','stadiumLiveBadge','stadiumWaveform','panelTL','panelTR','panelBL','stadiumCenterLogo'].forEach(id=>{
+        const el=document.getElementById(id);if(el)el.style.display='none';
+    });
+    const host=document.getElementById('stadium-canvas-host');
+    while(host.firstChild)host.removeChild(host.firstChild);
+    switchScreen('screen-upload');
+});
+
+/* ── Screen switch ── */
+function switchScreen(id){
+    document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+    setTimeout(()=>document.getElementById(id).classList.add('active'),50);
+}
+function showToast(msg){const t=document.createElement('div');t.className='toast';t.textContent=msg;document.body.appendChild(t);setTimeout(()=>t.remove(),4000);}
+</script>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     THREE.JS STADIUM — identical visuals to prueba.html, dynamic data
+═══════════════════════════════════════════════════════════════ -->
+<script type="module">
+import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.160/build/three.module.js";
+
+// Expose init3DStadium globally so the main script can call it
+window.init3DStadium = function() {
+    // ── Cleanup previous instance ──
+    if(window._stadiumAnimId){ cancelAnimationFrame(window._stadiumAnimId); window._stadiumAnimId=null; }
+    if(window._stadiumRenderer){ window._stadiumRenderer.dispose(); window._stadiumRenderer=null; }
+    const host = document.getElementById('stadium-canvas-host');
+    while(host.firstChild) host.removeChild(host.firstChild);
+
+    // Check if reactionsData exists
+    if(!reactionsData || !reactionsData.reactions) {
+        console.error('No reactions data available');
+        return;
+    }
+
+    const reactions   = reactionsData.reactions;
+    const totalAgents = reactions.length;
+
+    // ── Sector definitions: sectorIdx maps to shirt/LED colors ──
+    const SECTOR_MAP = {
+        add_to_playlist: { secIdx:0, mood:'happy'   },
+        share:           { secIdx:1, mood:'happy'   },
+        listen_once:     { secIdx:2, mood:'neutral' },
+        skip:            { secIdx:3, mood:'angry'   }
+    };
+    // Bucket agents by prediction
+    const buckets = {add_to_playlist:[],share:[],listen_once:[],skip:[]};
+    reactions.forEach(r=>{ if(buckets[r.streaming_prediction]) buckets[r.streaming_prediction].push(r); });
+
+    // Build a flat ordered array: [all_add_to_playlist, all_share, all_listen_once, all_skip]
+    // This determines which seat in the semicircle each agent goes to
+    const orderedAgents = [
+        ...buckets.add_to_playlist.map(r=>({...r, secIdx:0, mood:'happy'})),
+        ...buckets.share.map(r=>({...r, secIdx:1, mood:'happy'})),
+        ...buckets.listen_once.map(r=>({...r, secIdx:2, mood:'neutral'})),
+        ...buckets.skip.map(r=>({...r, secIdx:3, mood:'angry'}))
+    ];
+
+    // ── Scene setup ──
+    const scene = new THREE.Scene();
+    scene.fog = new THREE.FogExp2(0x020617, 0.009);
+
+    // Get container dimensions
+    const container = document.getElementById('stadium-canvas-host');
+    const containerWidth = container.clientWidth;
+    const containerHeight = container.clientHeight;
+
+    const camera = new THREE.PerspectiveCamera(50, containerWidth/containerHeight, 0.1, 500);
+    camera.position.set(0, 14, 24);
+    camera.lookAt(0, 4, 0);
+
+    const renderer = new THREE.WebGLRenderer({ antialias:true, alpha:false, powerPreference:'high-performance' });
+    renderer.setSize(containerWidth, containerHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio,2));
+    renderer.setClearColor(0x020617);
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.2;
+    // Append canvas to container (not body)
+    container.appendChild(renderer.domElement);
+
+    window._stadiumRenderer = renderer;
+
+    // ── Lighting (cinematic) - IMPROVED ──
+    scene.add(new THREE.AmbientLight(0x0d1933, 1.2)); // Increased from 0.8 to 1.2
+    const keySpot = new THREE.SpotLight(0xffffff, 500); // Increased from 400 to 500
+    keySpot.position.set(0,55,10); keySpot.angle=Math.PI/4; keySpot.penumbra=0.6;
+    keySpot.castShadow=true; keySpot.shadow.mapSize.set(4096,4096);
+    keySpot.shadow.bias=-0.0005; keySpot.shadow.camera.near=10; keySpot.shadow.camera.far=120;
+    scene.add(keySpot);
+    scene.add(new THREE.HemisphereLight(0x1a3066,0x050a10,0.7)); // Increased from 0.5 to 0.7
+    [{color:0x00ff44,pos:[-22,6,-8]},{color:0x0066ff,pos:[-10,6,-14]},{color:0xff8800,pos:[10,6,-14]},{color:0xff1111,pos:[22,6,-8]}].forEach(sl=>{
+        const pt=new THREE.PointLight(sl.color,80,35,1.5); // Increased from 60 to 80
+        pt.position.set(...sl.pos); scene.add(pt);
+    });
+    const stageCyan=new THREE.PointLight(0x00e5ff,220,18,1.8); // Increased from 180 to 220
+    stageCyan.position.set(0,3,0); scene.add(stageCyan);
+    const rimBack=new THREE.DirectionalLight(0x0033aa,0.7); // Increased from 0.5 to 0.7
+    rimBack.position.set(0,10,-30); scene.add(rimBack);
+    // Add fill light for better detail visibility
+    const fillLight=new THREE.DirectionalLight(0x4488ff,0.4);
+    fillLight.position.set(-20,15,20); scene.add(fillLight);
+
+    // ── Face textures ──
+    function createFaceTexture(mood, skinTone){
+        const c=document.createElement('canvas'); c.width=512; c.height=512;
+        const ctx=c.getContext('2d');
+        const sk=ctx.createRadialGradient(256,200,20,256,220,240);
+        sk.addColorStop(0,skinTone[0]); sk.addColorStop(1,skinTone[1]);
+        ctx.fillStyle=sk; ctx.fillRect(0,0,512,512);
+        ctx.fillStyle='rgba(255,100,80,0.12)';
+        ctx.beginPath(); ctx.ellipse(130,230,60,45,0,0,Math.PI*2); ctx.fill();
+        ctx.beginPath(); ctx.ellipse(382,230,60,45,0,0,Math.PI*2); ctx.fill();
+        ctx.strokeStyle='#1a0800'; ctx.lineWidth=18; ctx.lineCap='round'; ctx.lineJoin='round';
+        ctx.fillStyle=['#1a0800','#3d2200','#000000','#5c3a00','#8b4513'][Math.floor(Math.random()*5)];
+        if(Math.random()>0.5){ctx.beginPath();ctx.ellipse(256,80,170,110,0,Math.PI,0);ctx.fill();}
+        else{ctx.beginPath();ctx.moveTo(86,80);ctx.lineTo(60,300);ctx.lineTo(86,300);ctx.lineTo(86,80);ctx.fill();ctx.beginPath();ctx.moveTo(426,80);ctx.lineTo(452,300);ctx.lineTo(426,300);ctx.lineTo(426,80);ctx.fill();ctx.beginPath();ctx.ellipse(256,80,170,110,0,Math.PI,0);ctx.fill();}
+        const eyeColor=['#1a0a00','#00264d','#2d4d00','#4d1a00'][Math.floor(Math.random()*4)];
+        if(mood==='happy'){
+            ctx.strokeStyle='#2a1000';ctx.lineWidth=14;ctx.beginPath();ctx.moveTo(110,160);ctx.quadraticCurveTo(160,140,210,160);ctx.stroke();ctx.beginPath();ctx.moveTo(300,160);ctx.quadraticCurveTo(350,140,400,160);ctx.stroke();
+            ctx.strokeStyle='#1a0800';ctx.lineWidth=18;ctx.beginPath();ctx.arc(160,200,35,Math.PI+0.3,0-0.3);ctx.stroke();ctx.beginPath();ctx.arc(352,200,35,Math.PI+0.3,0-0.3);ctx.stroke();
+            ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(256,320,60,0,Math.PI);ctx.fill();ctx.strokeStyle='#1a0800';ctx.lineWidth=16;ctx.beginPath();ctx.arc(256,310,60,0,Math.PI);ctx.stroke();ctx.strokeStyle='rgba(0,0,0,0.2)';ctx.lineWidth=4;ctx.beginPath();ctx.moveTo(198,310);ctx.lineTo(314,310);ctx.stroke();
+        }else if(mood==='neutral'){
+            ctx.strokeStyle='#2a1000';ctx.lineWidth=12;ctx.beginPath();ctx.moveTo(110,170);ctx.lineTo(210,165);ctx.stroke();ctx.beginPath();ctx.moveTo(300,165);ctx.lineTo(400,170);ctx.stroke();
+            ctx.fillStyle='#fff';ctx.beginPath();ctx.ellipse(160,205,28,30,0,0,Math.PI*2);ctx.fill();ctx.beginPath();ctx.ellipse(352,205,28,30,0,0,Math.PI*2);ctx.fill();
+            ctx.fillStyle=eyeColor;ctx.beginPath();ctx.ellipse(160,205,16,18,0,0,Math.PI*2);ctx.fill();ctx.beginPath();ctx.ellipse(352,205,16,18,0,0,Math.PI*2);ctx.fill();
+            ctx.fillStyle='#000';ctx.beginPath();ctx.ellipse(163,207,8,9,0,0,Math.PI*2);ctx.fill();ctx.beginPath();ctx.ellipse(355,207,8,9,0,0,Math.PI*2);ctx.fill();
+            ctx.strokeStyle='#1a0800';ctx.lineWidth=14;ctx.beginPath();ctx.ellipse(160,205,28,30,0,0,Math.PI*2);ctx.stroke();ctx.beginPath();ctx.ellipse(352,205,28,30,0,0,Math.PI*2);ctx.stroke();
+            ctx.strokeStyle='#1a0800';ctx.lineWidth=16;ctx.beginPath();ctx.moveTo(190,325);ctx.quadraticCurveTo(256,335,322,325);ctx.stroke();
+        }else{
+            ctx.strokeStyle='#2a1000';ctx.lineWidth=16;ctx.beginPath();ctx.moveTo(100,155);ctx.lineTo(215,185);ctx.stroke();ctx.beginPath();ctx.moveTo(412,155);ctx.lineTo(297,185);ctx.stroke();
+            ctx.fillStyle='#fff';ctx.beginPath();ctx.ellipse(160,210,25,27,0,0,Math.PI*2);ctx.fill();ctx.beginPath();ctx.ellipse(352,210,25,27,0,0,Math.PI*2);ctx.fill();
+            ctx.fillStyle='#500';ctx.beginPath();ctx.ellipse(160,212,13,15,0,0,Math.PI*2);ctx.fill();ctx.beginPath();ctx.ellipse(352,212,13,15,0,0,Math.PI*2);ctx.fill();
+            ctx.fillStyle='#000';ctx.beginPath();ctx.ellipse(162,213,7,8,0,0,Math.PI*2);ctx.fill();ctx.beginPath();ctx.ellipse(354,213,7,8,0,0,Math.PI*2);ctx.fill();
+            ctx.strokeStyle='#1a0800';ctx.lineWidth=14;ctx.beginPath();ctx.ellipse(160,210,25,27,0,0,Math.PI*2);ctx.stroke();ctx.beginPath();ctx.ellipse(352,210,25,27,0,0,Math.PI*2);ctx.stroke();
+            ctx.strokeStyle='#1a0800';ctx.lineWidth=16;ctx.beginPath();ctx.moveTo(190,340);ctx.quadraticCurveTo(256,310,322,340);ctx.stroke();
+        }
+        ctx.strokeStyle='rgba(80,30,0,0.5)';ctx.lineWidth=10;ctx.beginPath();ctx.moveTo(248,240);ctx.lineTo(226,290);ctx.quadraticCurveTo(256,305,286,290);ctx.lineTo(264,240);ctx.stroke();
+        const t=new THREE.CanvasTexture(c); t.colorSpace=THREE.SRGBColorSpace; return t;
+    }
+    const skinTones=[['#ffe0c0','#d4956a'],['#f0c090','#c07840'],['#d4956a','#a05030'],['#8b5a2b','#5c3010'],['#ffe0d0','#e8a080']];
+    const faceMaterialPool={happy:[],neutral:[],angry:[]};
+    const POOL_SIZE=24;
+    ['happy','neutral','angry'].forEach(mood=>{for(let i=0;i<POOL_SIZE;i++){const skin=skinTones[Math.floor(Math.random()*skinTones.length)];faceMaterialPool[mood].push(new THREE.MeshStandardMaterial({map:createFaceTexture(mood,skin),roughness:0.35,metalness:0.05}));}});
+    function getRandomFaceMat(mood){const pool=faceMaterialPool[mood];return pool[Math.floor(Math.random()*pool.length)];}
+
+    // ── Shared geometries ──
+    const headGeo  = new THREE.BoxGeometry(0.44,0.44,0.44,2,2,2);
+    const torsoGeo = new THREE.CapsuleGeometry(0.22,0.38,4,12);
+    const legGeo   = new THREE.CapsuleGeometry(0.1,0.38,4,8);
+    const armGeo   = new THREE.CapsuleGeometry(0.07,0.32,4,8);
+    const shoeGeo  = new THREE.BoxGeometry(0.14,0.08,0.18);
+    const hairGeo  = new THREE.SphereGeometry(0.24,12,8,0,Math.PI*2,0,Math.PI*0.6);
+
+    // Shirt colors per section index
+    const shirtColors=[{c:0x00cc33,e:0x00ff44},{c:0x0066ee,e:0x0088ff},{c:0xdd8800,e:0xffaa00},{c:0xcc1111,e:0xff2222}];
+    const pantsMat=new THREE.MeshStandardMaterial({color:0x1a202c,roughness:0.9,metalness:0.05});
+    const shoeMat =new THREE.MeshStandardMaterial({color:0x111111,roughness:0.5,metalness:0.3});
+
+    function createAgent(secIdx, mood){
+        const agent=new THREE.Group();
+        const sc=shirtColors[secIdx];
+        const shirtMat=new THREE.MeshStandardMaterial({color:sc.c,roughness:0.25,metalness:0.3,emissive:sc.e,emissiveIntensity:0.08});
+        const skinMatBody=new THREE.MeshStandardMaterial({color:0xffccaa,roughness:0.4,metalness:0.03});
+        const faceMat=getRandomFaceMat(mood);
+        const headMats=[skinMatBody,skinMatBody,skinMatBody,skinMatBody,faceMat,skinMatBody];
+        // Head + neck pivot
+        const neckPivot=new THREE.Group(); neckPivot.position.y=1.15;
+        const head=new THREE.Mesh(headGeo,headMats); head.position.y=0.22; head.castShadow=true; neckPivot.add(head);
+        const earGeo=new THREE.SphereGeometry(0.07,8,8);
+        const earL=new THREE.Mesh(earGeo,skinMatBody); earL.position.set(-0.24,0.22,0); earL.scale.set(0.7,1,0.5); neckPivot.add(earL);
+        const earR=new THREE.Mesh(earGeo,skinMatBody); earR.position.set(0.24,0.22,0);  earR.scale.set(0.7,1,0.5); neckPivot.add(earR);
+        agent.add(neckPivot);
+        // Hair
+        const hairColors=[0x1a0800,0x3d2200,0x000000,0x5c3a00,0x8b4513];
+        const hairMat=new THREE.MeshStandardMaterial({color:hairColors[Math.floor(Math.random()*hairColors.length)],roughness:0.9});
+        const hair=new THREE.Mesh(hairGeo,hairMat); hair.position.set(0,1.37,0); hair.rotation.x=0.1; hair.castShadow=true; agent.add(hair);
+        // Torso
+        const torso=new THREE.Mesh(torsoGeo,shirtMat); torso.position.y=0.68; torso.castShadow=true; agent.add(torso);
+        // Neck mesh
+        const neckM=new THREE.Mesh(new THREE.CylinderGeometry(0.09,0.10,0.2,8),skinMatBody); neckM.position.y=1.05; agent.add(neckM);
+        // Legs
+        const thighL=new THREE.Group(); thighL.position.set(-0.14,0.38,0);
+        const tL=new THREE.Mesh(legGeo,pantsMat); tL.rotation.x=Math.PI/2.2; tL.position.z=0.2; tL.castShadow=true; thighL.add(tL); agent.add(thighL);
+        const thighR=new THREE.Group(); thighR.position.set(0.14,0.38,0);
+        const tR=new THREE.Mesh(legGeo,pantsMat); tR.rotation.x=Math.PI/2.2; tR.position.z=0.2; tR.castShadow=true; thighR.add(tR); agent.add(thighR);
+        const calfL=new THREE.Mesh(legGeo,pantsMat); calfL.position.set(-0.14,0.12,0.5); calfL.rotation.x=-0.4; calfL.castShadow=true; agent.add(calfL);
+        const calfR=new THREE.Mesh(legGeo,pantsMat); calfR.position.set(0.14,0.12,0.5);  calfR.rotation.x=-0.4; calfR.castShadow=true; agent.add(calfR);
+        const shoeL=new THREE.Mesh(shoeGeo,shoeMat); shoeL.position.set(-0.14,0.04,0.7); agent.add(shoeL);
+        const shoeR=new THREE.Mesh(shoeGeo,shoeMat); shoeR.position.set(0.14,0.04,0.7);  agent.add(shoeR);
+        // Arms
+        const shoulderL=new THREE.Group(); shoulderL.position.set(-0.32,0.88,0);
+        const aL=new THREE.Mesh(armGeo,shirtMat); aL.position.y=-0.2; aL.castShadow=true; shoulderL.add(aL);
+        const forearmL=new THREE.Group(); forearmL.position.y=-0.42;
+        const faL=new THREE.Mesh(armGeo,skinMatBody); faL.position.y=-0.18; faL.castShadow=true; forearmL.add(faL);
+        shoulderL.add(forearmL); agent.add(shoulderL);
+        const shoulderR=new THREE.Group(); shoulderR.position.set(0.32,0.88,0);
+        const aR=new THREE.Mesh(armGeo,shirtMat); aR.position.y=-0.2; aR.castShadow=true; shoulderR.add(aR);
+        const forearmR=new THREE.Group(); forearmR.position.y=-0.42;
+        const faR=new THREE.Mesh(armGeo,skinMatBody); faR.position.y=-0.18; faR.castShadow=true; forearmR.add(faR);
+        shoulderR.add(forearmR); agent.add(shoulderR);
+        agent.userData={mood,baseY:0,t:Math.random()*100,speed:0.8+Math.random()*0.8,neck:neckPivot,shoulderL,shoulderR,forearmL,forearmR};
+        return agent;
+    }
+
+    // ── Stage ──
+    const stageGroup=new THREE.Group();
+    const platform=new THREE.Mesh(new THREE.CylinderGeometry(5.5,6,0.9,80),new THREE.MeshStandardMaterial({color:0x050d1a,roughness:0.05,metalness:0.95}));
+    platform.receiveShadow=true; stageGroup.add(platform);
+    const glowDisc=new THREE.Mesh(new THREE.CylinderGeometry(4.5,4.5,0.05,60),new THREE.MeshStandardMaterial({color:0x00e5ff,emissive:0x00e5ff,emissiveIntensity:1.5,transparent:true,opacity:0.6}));
+    glowDisc.position.y=0.48; stageGroup.add(glowDisc);
+    for(let i=0;i<4;i++){
+        const ring=new THREE.Mesh(new THREE.TorusGeometry(2.5+i*0.9,0.04,16,120),new THREE.MeshStandardMaterial({color:0x00e5ff,emissive:0x00e5ff,emissiveIntensity:3,transparent:true,opacity:0.8-i*0.15}));
+        ring.rotation.x=Math.PI/2; ring.position.y=0.45; stageGroup.add(ring);
+    }
+    // REPLACED: Instead of floating pillars, add integrated stage edge lights
+    for(let i=0;i<8;i++){
+        const angle=(i/8)*Math.PI;
+        const radius=5.3; // Slightly inside platform edge
+        const px=Math.cos(angle)*radius;
+        const pz=-Math.sin(angle)*radius;
+        
+        // Small light post integrated into stage edge
+        const postBase=new THREE.Mesh(
+            new THREE.CylinderGeometry(0.08,0.12,0.15,8),
+            new THREE.MeshStandardMaterial({color:0x0a1520,roughness:0.3,metalness:0.8})
+        );
+        postBase.position.set(px,0.52,pz); // On top of platform
+        stageGroup.add(postBase);
+        
+        // Glowing top cap
+        const lightCap=new THREE.Mesh(
+            new THREE.SphereGeometry(0.06,12,12),
+            new THREE.MeshStandardMaterial({
+                color:0x00e5ff,
+                emissive:0x00e5ff,
+                emissiveIntensity:2.5,
+                transparent:true,
+                opacity:0.9
+            })
+        );
+        lightCap.position.set(px,0.60,pz); // Just above post
+        stageGroup.add(lightCap);
+        
+        // Add small point light at each position for actual illumination
+        const edgeLight=new THREE.PointLight(0x00e5ff,15,8,2);
+        edgeLight.position.set(px,0.65,pz);
+        stageGroup.add(edgeLight);
+    }
+    scene.add(stageGroup);
+
+    // ── Floor ──
+    const floorMesh=new THREE.Mesh(new THREE.CircleGeometry(80,128),new THREE.MeshStandardMaterial({color:0x020a1a,roughness:0.95,metalness:0.05}));
+    floorMesh.rotation.x=-Math.PI/2; floorMesh.position.y=-0.5; floorMesh.receiveShadow=true; scene.add(floorMesh);
+
+    // ── Stands geometry ──
+    // Scale stand to agent count (FIXED: more tiers for higher capacity)
+    let TIERS, R_START, ROW_DEPTH, ROW_H;
+    if      (totalAgents<=20)  { TIERS=5; R_START=8;  ROW_DEPTH=2.0; ROW_H=1.35; }
+    else if (totalAgents<=50)  { TIERS=7; R_START=8;  ROW_DEPTH=2.0; ROW_H=1.35; }
+    else if (totalAgents<=80)  { TIERS=9; R_START=8;  ROW_DEPTH=1.9; ROW_H=1.30; }
+    else if (totalAgents<=110) { TIERS=11; R_START=7; ROW_DEPTH=1.8; ROW_H=1.25; }
+    else                       { TIERS=13; R_START=7; ROW_DEPTH=1.7; ROW_H=1.20; }
+    const SPAN=Math.PI;
+    const ledColors=[0x00ff44,0x0088ff,0xffaa00,0xff2222];
+
+    // Build tier floors and riser walls (LED strips REMOVED)
+    for(let row=0;row<TIERS;row++){
+        const rIn=R_START+row*ROW_DEPTH, rOut=rIn+ROW_DEPTH, y=row*ROW_H;
+        const tierFloor=new THREE.Mesh(new THREE.RingGeometry(rIn,rOut,80,1,0,SPAN),new THREE.MeshStandardMaterial({color:row%2===0?0x0d1525:0x0a1020,roughness:0.8,metalness:0.1}));
+        tierFloor.rotation.x=-Math.PI/2; tierFloor.position.y=y; tierFloor.receiveShadow=true; scene.add(tierFloor);
+        if(row>0){
+            const wall=new THREE.Mesh(new THREE.CylinderGeometry(rIn,rIn,ROW_H,80,1,true,0,SPAN),new THREE.MeshStandardMaterial({color:0x06101e,roughness:0.9}));
+            wall.position.y=y-ROW_H/2; wall.receiveShadow=true; scene.add(wall);
+        }
+        // LED strips REMOVED - cleaner look
+    }
+
+    // ── Populate seats with REAL agents ──
+    // NEW: Distribute by VERTICAL SECTORS (triangular sections)
+    // Each sector gets its own angular range and fills from bottom to top
+    const secCounts=[buckets.add_to_playlist.length,buckets.share.length,buckets.listen_once.length,buckets.skip.length];
+    const totalFilled=secCounts.reduce((a,b)=>a+b,0)||1;
+    
+    // Calculate angular range for each section (divide semicircle into 4 sectors)
+    const secRanges=[];
+    const sectorAngularWidth = SPAN / 4; // Each sector gets equal angular space
+    for(let i=0; i<4; i++){
+        secRanges.push({
+            start: i * sectorAngularWidth,
+            end: (i + 1) * sectorAngularWidth,
+            secIdx: i,
+            count: secCounts[i]
+        });
+    }
+
+    const agentsArray=[];
+    let globalAgentIdx=0;
+
+    // Process each sector independently
+    secRanges.forEach((sector, sectorIdx) => {
+        if(sector.count === 0) return; // Skip empty sectors
+        
+        const sectorAgents = orderedAgents.filter(ag => ag.secIdx === sector.secIdx);
+        let agentIdx = 0;
+        
+        // Fill this sector from bottom row to top, expanding triangularly
+        for(let row=0; row<TIERS && agentIdx<sectorAgents.length; row++){
+            const rIn = R_START + row * ROW_DEPTH;
+            const y = row * ROW_H;
+            
+            // Calculate how many seats in this row for this sector
+            // FIXED: More aggressive distribution to fit all agents
+            const remainingAgents = sectorAgents.length - agentIdx;
+            const remainingRows = TIERS - row;
+            const baseSeats = Math.ceil(remainingAgents / remainingRows); // Distribute evenly across remaining rows
+            const seatsInThisRowForSector = Math.min(
+                Math.max(baseSeats, 3 + row * 2), // At least 3,5,7,9... per row, or more if needed
+                remainingAgents // Don't exceed available agents
+            );
+            
+            // Distribute seats evenly within this sector's angular range
+            const sectorCenter = (sector.start + sector.end) / 2;
+            const sectorWidth = sector.end - sector.start;
+            const usableWidth = sectorWidth * 0.85; // Leave 15% gap at borders
+            
+            for(let i=0; i<seatsInThisRowForSector && agentIdx<sectorAgents.length; i++){
+                // Calculate angle within this sector
+                let angle;
+                if(seatsInThisRowForSector === 1){
+                    angle = sectorCenter; // Single seat at center
+                } else {
+                    // Distribute evenly across sector width
+                    const t = i / (seatsInThisRowForSector - 1); // 0 to 1
+                    angle = sectorCenter - usableWidth/2 + t * usableWidth;
+                }
+                
+                const agData = sectorAgents[agentIdx++];
+                const r = rIn + ROW_DEPTH * 0.55;
+                const x = Math.cos(angle) * r;
+                const z = -Math.sin(angle) * r;
+                
+                const ag = createAgent(agData.secIdx, agData.mood);
+                ag.position.set(x, y, z);
+                ag.rotation.y = -angle + Math.PI/2;
+                ag.userData.baseY = y;
+                
+                // Pop-in animation
+                ag.visible = false;
+                ag.scale.set(0, 0, 0);
+                scene.add(ag);
+                agentsArray.push(ag);
+                
+                const delay = globalAgentIdx * 14;
+                setTimeout(() => {
+                    ag.visible = true;
+                    (function popIn(t0){
+                        const p = Math.min((Date.now()-t0)/560, 1);
+                        const e = 1 - Math.pow(1-p, 3);
+                        ag.scale.set(e, e, e);
+                        if(p < 1) requestAnimationFrame(() => popIn(t0));
+                    })(Date.now());
+                }, delay);
+                
+                globalAgentIdx++;
+            }
+        }
+    });
+
+    // ── Particles ──
+    const pGeo=new THREE.BufferGeometry();
+    const pN=2000, pPos=new Float32Array(pN*3);
+    for(let i=0;i<pN*3;i++) pPos[i]=(Math.random()-0.5)*100;
+    pGeo.setAttribute('position',new THREE.BufferAttribute(pPos,3));
+    const particles=new THREE.Points(pGeo,new THREE.PointsMaterial({color:0x00e5ff,size:0.12,transparent:true,opacity:0.5,blending:THREE.AdditiveBlending,depthWrite:false}));
+    particles.position.y=20; scene.add(particles);
+
+    const sparkGeo=new THREE.BufferGeometry();
+    const sN=300, sPos=new Float32Array(sN*3);
+    for(let i=0;i<sN;i++){const a=Math.random()*Math.PI,r=5+Math.random()*20;sPos[i*3]=Math.cos(a)*r;sPos[i*3+1]=Math.random()*20;sPos[i*3+2]=-Math.sin(a)*r;}
+    sparkGeo.setAttribute('position',new THREE.BufferAttribute(sPos,3));
+    const sparks=new THREE.Points(sparkGeo,new THREE.PointsMaterial({color:0xffffff,size:0.2,transparent:true,opacity:0.7,blending:THREE.AdditiveBlending,depthWrite:false}));
+    scene.add(sparks);
+
+    // ── Animation loop ──
+    const clock=new THREE.Clock();
+    function animate(){
+        window._stadiumAnimId=requestAnimationFrame(animate);
+        const time=clock.getElapsedTime();
+        // Stage rings pulse
+        stageGroup.children.forEach((child,idx)=>{if(child.geometry?.type==='TorusGeometry'){const s=1+Math.sin(time*2.5+idx)*0.015;child.scale.set(s,s,s);}});
+        glowDisc.material.emissiveIntensity=1.2+Math.sin(time*3)*0.6;
+        stageCyan.intensity=160+Math.sin(time*2.5)*40;
+        // Particles
+        particles.rotation.y=time*0.025;
+        particles.position.y=18+Math.sin(time*0.4)*3;
+        const sArr=sparkGeo.attributes.position.array;
+        for(let i=0;i<sN;i++){sArr[i*3+1]+=0.03;if(sArr[i*3+1]>25)sArr[i*3+1]=0;}
+        sparkGeo.attributes.position.needsUpdate=true;
+        // Agent animations
+        agentsArray.forEach(ag=>{
+            const d=ag.userData, t=time*d.speed+d.t;
+            const neck=d.neck, sL=d.shoulderL, sR=d.shoulderR, fL=d.forearmL, fR=d.forearmR;
+            if(d.mood==='happy'){
+                ag.position.y=d.baseY+Math.abs(Math.sin(t*1.8))*0.28;
+                sL.rotation.z= Math.sin(t)*0.7-2.2; sL.rotation.x= Math.cos(t*0.8)*0.3;
+                sR.rotation.z=-Math.sin(t)*0.7+2.2; sR.rotation.x= Math.cos(t*0.8)*0.3;
+                fL.rotation.x= Math.sin(t*1.2)*0.4; fR.rotation.x=-Math.sin(t*1.2)*0.4;
+                neck.rotation.y=Math.sin(t*0.6)*0.25; neck.rotation.x=Math.sin(t*1.4)*0.1-0.05;
+            }else if(d.mood==='neutral'){
+                ag.position.y=d.baseY;
+                sL.rotation.z=0.25; sL.rotation.x=0.7; sR.rotation.z=-0.25; sR.rotation.x=0.7;
+                fL.rotation.x=0.3; fR.rotation.x=0.3;
+                neck.rotation.y=Math.sin(t*0.25)*0.5; neck.rotation.x=0.05;
+            }else{
+                ag.position.y=d.baseY;
+                sL.rotation.z=-1.0; sL.rotation.x=0.8; sR.rotation.z=1.0; sR.rotation.x=0.8;
+                fL.rotation.x=0.6; fR.rotation.x=0.6;
+                neck.rotation.y=Math.sin(t*2.2)*0.28; neck.rotation.x=0.18;
+            }
+        });
+        // Cinematic camera orbit (closer for detail)
+        const camT=time*0.07;
+        camera.position.x=Math.sin(camT)*3; // Reduced from 4
+        camera.position.y=13+Math.sin(time*0.05)*1.5; // Lower: was 16+2
+        camera.position.z=24+Math.cos(camT*0.7)*1.5; // Closer: was 30+2
+        camera.lookAt(0,4,0); // Look slightly lower
+        renderer.render(scene,camera);
+    }
+    animate();
+
+    window.addEventListener('resize',()=>{
+        const newWidth = container.clientWidth;
+        const newHeight = container.clientHeight;
+        camera.aspect = newWidth / newHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(newWidth, newHeight);
+    });
+};
+</script>
+
+</body>
+</html>
